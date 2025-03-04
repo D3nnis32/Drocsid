@@ -5,13 +5,14 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <RootNamespace>Drocsid.HenrikDennis2025.Server</RootNamespace>
-        <PackageId>Server</PackageId>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.5" />
-        <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.0" />
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
+        <Protobuf Include="Protos\greet.proto" GrpcServices="Server"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Grpc.AspNetCore" Version="2.57.0"/>
     </ItemGroup>
 
 </Project>
