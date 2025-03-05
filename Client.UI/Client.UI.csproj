@@ -10,4 +10,8 @@
         <PackageId>Client.UI</PackageId>
     </PropertyGroup>
 
+    <ItemGroup>
+      <Folder Include="Resources\" />
+    </ItemGroup>
+
 </Project>
