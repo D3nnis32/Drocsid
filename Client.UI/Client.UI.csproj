@@ -14,4 +14,8 @@
       <Folder Include="Resources\" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Page Include="App.xaml" />
+    </ItemGroup>
+
 </Project>
