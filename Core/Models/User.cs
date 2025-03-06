@@ -7,7 +7,6 @@ public class User
     public string Email { get; set; }
     public UserStatus Status { get; set; }
     public DateTime LastSeen { get; set; }
-    public string PasswordHash { get; set; }
 }
 
 public enum UserStatus
