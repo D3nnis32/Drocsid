@@ -1,0 +1,20 @@
+﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=2d7d0498_002D7eae_002D47fc_002D90bc_002De1440538e53d/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="All tests from Solution #2" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
+  &lt;Solution /&gt;&#xD;
+&lt;/SessionState&gt;</s:String>
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=3b4cd605_002D0764_002D44a9_002D9e90_002D4aaf3490d961/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" Name="All tests from &amp;lt;Drocsid.HenrikDennis2025.Tests&amp;gt;" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
+  &lt;Project Location="C:\Users\Dennis\workspace\Hochschule\VerteilteSysteme\Drocsid.HenrikDennis2025\Drocsid.HenrikDennis2025.Tests" Presentation="&amp;lt;Drocsid.HenrikDennis2025.Tests&amp;gt;" /&gt;&#xD;
+&lt;/SessionState&gt;</s:String>
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=49ab216a_002D1ad9_002D43d4_002D8347_002D7e6aad262f93/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" Name="CreateUserAsync_WhenUsernameDoesNotExist_CreatesAndReturnsUser" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
+  &lt;TestAncestor&gt;&#xD;
+    &lt;TestId&gt;xUnit::DA6B876A-C6CD-408E-A0F3-B77D2D1E22F2::net8.0::Drocsid.HenrikDennis2025.Tests.Unit.UserServiceTests.CreateUserAsync_WhenUsernameDoesNotExist_CreatesAndReturnsUser&lt;/TestId&gt;&#xD;
+  &lt;/TestAncestor&gt;&#xD;
+&lt;/SessionState&gt;</s:String>
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=92ddc4fe_002Dabcf_002D43a8_002Dbbdb_002D901e1b779c80/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" Name="AuthControllerTests" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
+  &lt;TestAncestor&gt;&#xD;
+    &lt;TestId&gt;xUnit::DA6B876A-C6CD-408E-A0F3-B77D2D1E22F2::net8.0::Drocsid.HenrikDennis2025.Tests.Unit.AuthControllerTests&lt;/TestId&gt;&#xD;
+  &lt;/TestAncestor&gt;&#xD;
+&lt;/SessionState&gt;</s:String>
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=e4ddedde_002D4d46_002D4a59_002Db856_002D299708cc61f1/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" Name="All tests from Solution" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
+  &lt;Solution /&gt;&#xD;
+&lt;/SessionState&gt;</s:String></wpf:ResourceDictionary>
