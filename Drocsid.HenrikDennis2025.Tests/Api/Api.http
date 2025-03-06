@@ -1,0 +1,101 @@
+### Variablen definieren
+@host = http://localhost:5186
+@token =
+
+### Login
+POST {{host}}/api/Auth/login
+Content-Type: application/json
+
+{
+  "username": "dennnis",
+  "password": "123"
+}
+
+> {%
+    if (response.body.token) {
+        client.global.set("token", response.body.token);
+    }
+%}
+
+<> 2025-03-06T130214.200.json
+<> 2025-03-06T125937.200.json
+
+### Channels abrufen (authentifiziert)
+GET {{host}}/api/Channels
+Authorization: Bearer {{token}}
+
+<> 2025-03-06T130301.200.json
+<> 2025-03-06T130243.200.json
+<> 2025-03-06T130224.200.json
+<> 2025-03-06T130048.200.json
+<> 2025-03-06T130037.200.json
+<> 2025-03-06T130018.200.json
+
+### Einen bestimmten Channel abrufen
+GET {{host}}/api/Channels/11111111-1111-1111-1111-111111111111
+Authorization: Bearer {{token}}
+
+<> 2025-03-06T130021.404.json
+
+### Neuen Channel erstellen
+POST {{host}}/api/Channels
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Neuer Channel",
+  "type": 0
+}
+
+<> 2025-03-06T130230.201.json
+<> 2025-03-06T130043.201.json
+<> 2025-03-06T130027.201.json
+
+### Channel-Nachrichten abrufen
+GET {{host}}/api/channels/7f056491-2b8c-41e5-b640-ee9973d8129d/messages
+Authorization: Bearer {{token}}
+
+<> 2025-03-06T130336.200.json
+<> 2025-03-06T130313.200.json
+<> 2025-03-06T130251.404.json
+<> 2025-03-06T130056.404.json
+
+### Neue Nachricht senden
+POST {{host}}/api/channels/7f056491-2b8c-41e5-b640-ee9973d8129d/messages
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "content": "Hallo, dies ist eine Test-Nachricht!",
+  "attachmentIds": []
+}
+
+<> 2025-03-06T130331.200.json
+<> 2025-03-06T130317.200.json
+
+### Upload a file
+POST {{host}}/api/Files
+Content-Type: multipart/form-data; boundary=boundary
+Authorization: Bearer {{token}}
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+This is a test file content.
+--boundary--
+
+> {%
+    if (response.body.storagePath) {
+        client.global.set("filePath", response.body.storagePath);
+    }
+%}
+
+<> 2025-03-06T131748.200.json
+<> 2025-03-06T131744.200.json
+
+### Download the file
+GET {{host}}/api/Files?path={{filePath}}
+Authorization: Bearer {{token}}
+
+<> test.txt
