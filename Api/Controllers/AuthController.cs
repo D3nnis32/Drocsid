@@ -1,9 +1,7 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Drocsid.HenrikDennis2025.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
 
 namespace Drocsid.HenrikDennis2025.Api.Controllers;
 
@@ -31,7 +29,7 @@ namespace Drocsid.HenrikDennis2025.Api.Controllers;
             }
 
             // Get user details
-            var users = await _userService.FindUsersAsync(u => u.Username == request.Username);
+            var users = await _userService.FindAsync(u => u.Username == request.Username);
             var user = users.FirstOrDefault();
             if (user == null)
             {
