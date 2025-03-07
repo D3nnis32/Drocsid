@@ -6,9 +6,6 @@
              xmlns:local="clr-namespace:UI"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <UserControl.DataContext>
-        <Binding Source="{StaticResource VMLocator}" Path="LoginUCVM" />
-    </UserControl.DataContext>
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
@@ -64,7 +61,7 @@
                 <TextBlock Text="{Binding ErrorMessage}" Foreground="Red">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
-                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Setter Property="Visibility" Value="Visible"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding ErrorMessage}" Value="">
                                     <Setter Property="Visibility" Value="Collapsed"/>

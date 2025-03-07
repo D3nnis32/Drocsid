@@ -67,11 +67,19 @@ namespace Logic.UI.ViewModels
                 if (response.IsSuccessStatusCode)
                 {
                     var result = await response.Content.ReadFromJsonAsync<LoginResponse>();
-                    _mainWindowViewModel.NavigateToChat(); //Muss implementiert werden
+                    if (result != null && !string.IsNullOrEmpty(result.Token))
+                    {
+                        TokenStorage.JwtToken = result.Token;
+                        _mainWindowViewModel.NavigateToChat();
+                    }
+                    else
+                    {
+                        ErrorMessage = "Invalid response from server.";
+                    }
                 }
                 else
                 {
-                    ErrorMessage = response.StatusCode.ToString();
+                    ErrorMessage = "Invalid username or password";
                 }
             }
             catch (Exception ex)

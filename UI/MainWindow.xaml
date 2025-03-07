@@ -4,10 +4,11 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:UI"
+        xmlns:viewModel="clr-namespace:Logic.UI.ViewModels;assembly=Logic.UI"
         mc:Ignorable="d"
         Title="Chat App" Height="1024" Width="1920" Background="Black">
     <Window.DataContext>
-        <Binding Source="{StaticResource VMLocator}" Path="MainWindowVM" />
+        <viewModel:MainWindowViewModel />
     </Window.DataContext>
     <Grid Margin="10">
         <ContentControl Grid.Row="1" Grid.Column="1"

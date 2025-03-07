@@ -2,13 +2,23 @@
 @host = http://localhost:5186
 @token =
 
+###
+POST {{host}}/api/Users
+Content-Type: application/json
+
+{
+  "username": "henrik",
+  "email": "buh",
+  "password": "1234"
+}
+
 ### Login
 POST {{host}}/api/Auth/login
 Content-Type: application/json
 
 {
-  "username": "dennnis",
-  "password": "123"
+  "username": "henrik",
+  "password": "1234"
 }
 
 > {%
@@ -22,7 +32,7 @@ Content-Type: application/json
 
 ### Channels abrufen (authentifiziert)
 GET {{host}}/api/Channels
-Authorization: Bearer {{token}}
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0ODI1NDYxMi1lYzQxLTQ0OWEtYmNhNS1kNTA3NzU4OTE5MzAiLCJ1bmlxdWVfbmFtZSI6ImhlbnJpayIsImp0aSI6IjRhMThkN2RiLTlhNDAtNDE3Ny1hNDUxLTk0NTQ0NmEzZDQyNSIsImV4cCI6MTc0MTk2NzgxMiwiaXNzIjoiSGVucmlrRGVubmlzIiwiYXVkIjoiQXBpQXBwIn0.zjLuQaMis_cuctG6H5JraaYfIb_H4bNKSUwkYaDGEp8
 
 <> 2025-03-06T130301.200.json
 <> 2025-03-06T130243.200.json
@@ -33,17 +43,17 @@ Authorization: Bearer {{token}}
 
 ### Einen bestimmten Channel abrufen
 GET {{host}}/api/Channels/11111111-1111-1111-1111-111111111111
-Authorization: Bearer {{token}}
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0ODI1NDYxMi1lYzQxLTQ0OWEtYmNhNS1kNTA3NzU4OTE5MzAiLCJ1bmlxdWVfbmFtZSI6ImhlbnJpayIsImp0aSI6IjRhMThkN2RiLTlhNDAtNDE3Ny1hNDUxLTk0NTQ0NmEzZDQyNSIsImV4cCI6MTc0MTk2NzgxMiwiaXNzIjoiSGVucmlrRGVubmlzIiwiYXVkIjoiQXBpQXBwIn0.zjLuQaMis_cuctG6H5JraaYfIb_H4bNKSUwkYaDGEp8
 
 <> 2025-03-06T130021.404.json
 
 ### Neuen Channel erstellen
 POST {{host}}/api/Channels
 Content-Type: application/json
-Authorization: Bearer {{token}}
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0ODI1NDYxMi1lYzQxLTQ0OWEtYmNhNS1kNTA3NzU4OTE5MzAiLCJ1bmlxdWVfbmFtZSI6ImhlbnJpayIsImp0aSI6IjRhMThkN2RiLTlhNDAtNDE3Ny1hNDUxLTk0NTQ0NmEzZDQyNSIsImV4cCI6MTc0MTk2NzgxMiwiaXNzIjoiSGVucmlrRGVubmlzIiwiYXVkIjoiQXBpQXBwIn0.zjLuQaMis_cuctG6H5JraaYfIb_H4bNKSUwkYaDGEp8
 
 {
-  "name": "Neuer Channel",
+  "name": "Neuer Channel2",
   "type": 0
 }
 
