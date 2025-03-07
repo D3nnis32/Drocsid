@@ -10,14 +10,14 @@ namespace Logic.UI
     public class ViewModelLocator
     {
         public MainWindowViewModel MainWindowVM { get; set; }
-        public ApplicationUserControlViewModel ApplicationUCVM { get; set; }
+        public ChatInterfaceUserControlViewModel ChatInterfaceUCVM { get; set; }
         public LoginUserControlViewModel LoginUCVM { get; set; }
         public ChatUserControlViewModel ChatUCVM { get; set; }
         public ViewModelLocator()
         {
             MainWindowVM = new MainWindowViewModel();
-            ApplicationUCVM = new ApplicationUserControlViewModel();
-            LoginUCVM = new LoginUserControlViewModel();
+            LoginUCVM = new LoginUserControlViewModel(MainWindowVM);
+            ChatInterfaceUCVM = new ChatInterfaceUserControlViewModel();
             ChatUCVM = new ChatUserControlViewModel();
         }
     }

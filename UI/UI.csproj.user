@@ -7,7 +7,7 @@
     </ApplicationDefinition>
   </ItemGroup>
   <ItemGroup>
-    <Compile Update="ApplicationUserControl.xaml.cs">
+    <Compile Update="ChatInterfaceUserControl.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="ChatUserControl.xaml.cs">
@@ -18,7 +18,7 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Page Update="ApplicationUserControl.xaml">
+    <Page Update="ChatInterfaceUserControl.xaml">
       <SubType>Designer</SubType>
     </Page>
     <Page Update="ChatUserControl.xaml">

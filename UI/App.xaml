@@ -3,10 +3,17 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:UI"
              xmlns:viewModel="clr-namespace:Logic.UI;assembly=Logic.UI"
+             xmlns:vm="clr-namespace:Logic.UI.ViewModels;assembly=Logic.UI"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
         <ResourceDictionary>
             <viewModel:ViewModelLocator x:Key="VMLocator"/>
+            <DataTemplate DataType="{x:Type vm:LoginUserControlViewModel}">
+                <local:LoginUserControl/>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:ChatInterfaceUserControlViewModel}">
+                <local:ChatInterfaceUserControl />
+            </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
