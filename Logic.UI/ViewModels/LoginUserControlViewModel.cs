@@ -1,11 +1,6 @@
-﻿using Drocsid.HenrikDennis2025.Api.Controllers;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
+﻿using System.ComponentModel;
 using System.Net.Http.Json;
-using System.Text;
-using System.Threading.Tasks;
+using Drocsid.HenrikDennis2025.Core.DTO;
 
 namespace Logic.UI.ViewModels
 {
@@ -76,7 +71,7 @@ namespace Logic.UI.ViewModels
                 }
                 else
                 {
-                    ErrorMessage = "Invalid username or password.";
+                    ErrorMessage = response.StatusCode.ToString();
                 }
             }
             catch (Exception ex)

@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Drocsid.HenrikDennis2025.Core.DTO;
 using Drocsid.HenrikDennis2025.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -72,17 +73,4 @@ namespace Drocsid.HenrikDennis2025.Api.Controllers;
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
-    }
-
-    public class LoginRequest
-    {
-        public string Username { get; set; }
-        public string Password { get; set; }
-    }
-
-    public class LoginResponse
-    {
-        public string Token { get; set; }
-        public Guid UserId { get; set; }
-        public string Username { get; set; }
     }
