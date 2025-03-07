@@ -1,3 +1,4 @@
+using Drocsid.HenrikDennis2025.Core.DTO;
 using Drocsid.HenrikDennis2025.Core.Interfaces.Services;
 using Drocsid.HenrikDennis2025.Core.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -121,15 +122,4 @@ namespace Drocsid.HenrikDennis2025.Api.Controllers;
             // For now, return a dummy user ID
             return new Guid("11111111-1111-1111-1111-111111111111");
         }
-    }
-
-    public class CreateChannelRequest
-    {
-        public string Name { get; set; }
-        public ChannelType Type { get; set; }
-    }
-
-    public class AddMemberRequest
-    {
-        public Guid UserId { get; set; }
     }

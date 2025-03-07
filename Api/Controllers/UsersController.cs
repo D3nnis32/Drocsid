@@ -1,3 +1,4 @@
+using Drocsid.HenrikDennis2025.Core.DTO;
 using Drocsid.HenrikDennis2025.Core.Interfaces.Services;
 using Drocsid.HenrikDennis2025.Core.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -72,16 +73,4 @@ namespace Drocsid.HenrikDennis2025.Api.Controllers;
             // For now, return a dummy user ID
             return new Guid("11111111-1111-1111-1111-111111111111");
         }
-    }
-
-    public class CreateUserRequest
-    {
-        public string Username { get; set; }
-        public string Email { get; set; }
-        public string Password { get; set; }
-    }
-
-    public class UserStatusUpdateRequest
-    {
-        public UserStatus Status { get; set; }
     }
