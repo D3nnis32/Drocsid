@@ -1,0 +1,6 @@
+@Drocsid.HenrikDennis2025.RegistryService_HostAddress = http://localhost:5261
+
+GET {{Drocsid.HenrikDennis2025.RegistryService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
