@@ -121,7 +121,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Drocsid Registry API v1"));
 }
 
-builder.WebHost.UseUrls("http://localhost:5000;https://localhost:5001");
+builder.WebHost.UseUrls("http://*:5261");
 //app.UseHttpsRedirection();
 app.UseCors("AllowAll");
 app.UseRouting();

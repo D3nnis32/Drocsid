@@ -44,6 +44,7 @@ public class RegistryDbContext : DbContext
         // Configure StorageNode
         modelBuilder.Entity<StorageNode>(entity =>
         {
+            // entity.ToTable("Nodes");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).ValueGeneratedNever();
             entity.Property(e => e.Hostname).IsRequired();

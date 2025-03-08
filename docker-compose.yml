@@ -5,10 +5,9 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 123
-      POSTGRES_MULTIPLE_DATABASES: drocsid,drocsid_registry
     volumes:
-      - postgres-data:/var/lib/postgresql/data
-      - ./init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
+    - postgres-data:/var/lib/postgresql/data
+    - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5432:5432"
     networks:
@@ -35,8 +34,15 @@ services:
       - "5261:5261"
     volumes:
       - ./registry-appsettings.json:/app/appsettings.json
+    entrypoint: ["sh", "-c", "ls -la /app && dotnet --info && dotnet RegistryService.dll"]
     networks:
       - drocsid-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5261/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   api-node-1:
     build:
@@ -47,7 +53,7 @@ services:
       postgres:
         condition: service_healthy
       registry-service:
-        condition: service_started
+        condition: service_healthy
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=drocsid;Username=postgres;Password=123
@@ -77,7 +83,7 @@ services:
       postgres:
         condition: service_healthy
       registry-service:
-        condition: service_started
+        condition: service_healthy
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=drocsid;Username=postgres;Password=123
@@ -107,7 +113,7 @@ services:
       postgres:
         condition: service_healthy
       registry-service:
-        condition: service_started
+        condition: service_healthy
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=drocsid;Username=postgres;Password=123

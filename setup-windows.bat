@@ -1,21 +1,17 @@
 @echo off
 echo Setting up Drocsid Docker environment...
 
-REM Make init-multiple-databases.sh executable for WSL
-echo Converting line endings for bash scripts...
-powershell -Command "(Get-Content init-multiple-databases.sh) | ForEach-Object { $_ -replace \"`r`n\", \"`n\" } | Set-Content -NoNewline init-multiple-databases.sh"
-
-REM Create required directories
-echo Creating required directories...
-mkdir Core\Interfaces\Options 2>nul
-
-REM Fix project files to prevent conflicts
-echo Running PowerShell script to fix project files...
-powershell -File fix-projects.ps1
+REM Create init.sql file
+echo Creating database initialization script...
+echo -- Registry database for the central registry service > init.sql
+echo CREATE DATABASE drocsid_registry; >> init.sql
+echo. >> init.sql
+echo -- Shared database for API nodes >> init.sql
+echo CREATE DATABASE drocsid; >> init.sql
 
 REM Clean any previous Docker containers
 echo Cleaning previous Docker containers...
-docker-compose down
+docker-compose down -v
 
 REM Start Docker Compose
 echo Starting Docker Compose...
