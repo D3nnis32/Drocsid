@@ -1,10 +1,13 @@
--- Registry database for the central registry service 
-CREATE DATABASE drocsid_registry; 
- 
--- Shared database for API nodes 
-CREATE DATABASE drocsid;
-
-\connect drocsid_registry;
+-- Drop tables if they exist (in reverse order of dependencies)
+DROP TABLE IF EXISTS "MessageLocations";
+DROP TABLE IF EXISTS "ChannelNodes";
+DROP TABLE IF EXISTS "UserChannels";
+DROP TABLE IF EXISTS "Attachments";
+DROP TABLE IF EXISTS "Messages";
+DROP TABLE IF EXISTS "Channels";
+DROP TABLE IF EXISTS "Users";
+DROP TABLE IF EXISTS "Files";
+DROP TABLE IF EXISTS "Nodes";
 
 -- Create Nodes table
 CREATE TABLE IF NOT EXISTS "Nodes" (

@@ -214,18 +214,51 @@ if (!string.IsNullOrEmpty(nodeId) && !string.IsNullOrEmpty(registryEndpoint))
     }
 }
 
+// With this more robust version:
 using (var scope = app.Services.CreateScope())
 {
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
     var dbContext = scope.ServiceProvider.GetRequiredService<RegistryDbContext>();
     
-    // This will drop the database and recreate it with the correct schema
-    // Only do this in Development - remove for Production!
-    if (app.Environment.IsDevelopment())
+    try 
     {
-        dbContext.Database.EnsureDeleted();
+        logger.LogInformation("Initializing database schema...");
+        
+        // Check if database exists
+        bool dbExists = await dbContext.Database.CanConnectAsync();
+        if (!dbExists)
+        {
+            logger.LogWarning("Cannot connect to database - check connection string and ensure PostgreSQL is running");
+        }
+        else
+        {
+            logger.LogInformation("Successfully connected to database");
+            
+            // Check if tables exist by querying information schema
+            var tablesQuery = await dbContext.Database
+                .SqlQuery<string>($"SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+                .ToListAsync();
+                
+            logger.LogInformation("Found {Count} tables in database. Tables: {Tables}", 
+                tablesQuery.Count, string.Join(", ", tablesQuery));
+                
+            // If no tables or missing expected tables, recreate schema
+            if (tablesQuery.Count == 0 || !tablesQuery.Contains("Nodes"))
+            {
+                logger.LogWarning("Required tables don't exist. Recreating database schema...");
+                
+                // Force recreation
+                await dbContext.Database.EnsureDeletedAsync();
+                await dbContext.Database.EnsureCreatedAsync();
+                
+                logger.LogInformation("Database schema created successfully");
+            }
+        }
     }
-    
-    dbContext.Database.EnsureCreated();
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Error during database initialization");
+    }
 }
 
 app.Run();
