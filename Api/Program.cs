@@ -214,4 +214,18 @@ if (!string.IsNullOrEmpty(nodeId) && !string.IsNullOrEmpty(registryEndpoint))
     }
 }
 
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<RegistryDbContext>();
+    
+    // This will drop the database and recreate it with the correct schema
+    // Only do this in Development - remove for Production!
+    if (app.Environment.IsDevelopment())
+    {
+        dbContext.Database.EnsureDeleted();
+    }
+    
+    dbContext.Database.EnsureCreated();
+}
+
 app.Run();

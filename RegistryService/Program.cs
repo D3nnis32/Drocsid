@@ -139,18 +139,18 @@ app.Use(async (context, next) =>
 });
 
 // Ensure database is created and migrated
-// using (var scope = app.Services.CreateScope())
-// {
-//     var dbContext = scope.ServiceProvider.GetRequiredService<RegistryDbContext>();
-//     
-//     // This will drop the database and recreate it with the correct schema
-//     // Only do this in Development - remove for Production!
-//     if (app.Environment.IsDevelopment())
-//     {
-//         dbContext.Database.EnsureDeleted();
-//     }
-//     
-//     dbContext.Database.EnsureCreated();
-// }
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<RegistryDbContext>();
+    
+    // This will drop the database and recreate it with the correct schema
+    // Only do this in Development - remove for Production!
+    if (app.Environment.IsDevelopment())
+    {
+        dbContext.Database.EnsureDeleted();
+    }
+    
+    dbContext.Database.EnsureCreated();
+}
 
 app.Run();
