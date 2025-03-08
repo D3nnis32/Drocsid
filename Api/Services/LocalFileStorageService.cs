@@ -2,7 +2,7 @@ using Drocsid.HenrikDennis2025.Core.Interfaces.Services;
 using Drocsid.HenrikDennis2025.Core.Models;
 using FileInfo = Drocsid.HenrikDennis2025.Core.Models.FileInfo;
 
-namespace Drocsid.HenrikDennis2025.Server.Services;
+namespace Drocsid.HenrikDennis2025.Api.Services;
 
 public class LocalFileStorageService : IFileStorageService
     {

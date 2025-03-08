@@ -1,0 +1,33 @@
+# Fix conflicts in appsettings.json
+
+# Add this to Server.csproj
+$serverCsprojPath = "Server\Server.csproj"
+$serverCsproj = Get-Content $serverCsprojPath
+
+if (-not ($serverCsproj -match "<ItemGroup>\s*<Content Update=""appsettings.json"">")) {
+    # Find the closing </Project> tag
+    $lastIndex = $serverCsproj.Count - 1
+    for ($i = $lastIndex; $i -ge 0; $i--) {
+        if ($serverCsproj[$i] -match "</Project>") {
+            $serverCsproj[$i] = @"
+    <ItemGroup>
+        <Content Update="appsettings.json">
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+            <CopyToPublishDirectory>Never</CopyToPublishDirectory>
+        </Content>
+    </ItemGroup>
+</Project>
+"@
+            break
+        }
+    }
+
+    Set-Content -Path $serverCsprojPath -Value $serverCsproj
+    Write-Host "Updated Server.csproj to prevent appsettings.json conflicts"
+}
+
+# Now, clean any existing Docker images for our project
+docker-compose down
+docker rmi drocsidhenrikdennis2025-api-node-1 drocsidhenrikdennis2025-api-node-2 drocsidhenrikdennis2025-api-node-3 drocsidhenrikdennis2025-registry-service
+
+Write-Host "Done. You can now run 'docker-compose up -d' to start the containers."

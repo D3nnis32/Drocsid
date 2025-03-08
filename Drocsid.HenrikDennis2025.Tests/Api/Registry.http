@@ -1,7 +1,7 @@
 ### Environment Variables
-@registryUrl = http://localhost:5000
-@storageNode1Url = http://localhost:5100
-@storageNode2Url = http://localhost:5200
+@registryUrl = http://localhost:5261
+@storageNode1Url =
+@storageNode2Url =
 @testUsername = testuser
 @testPassword = Password123!
 @adminUsername = admin

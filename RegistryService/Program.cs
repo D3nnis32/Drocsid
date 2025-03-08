@@ -68,6 +68,7 @@ builder.Services.Configure<RegistryOptions>(builder.Configuration.GetSection("Re
 
 // Register NodeHealthMonitor as a scoped service
 builder.Services.AddScoped<INodeHealthMonitor, NodeHealthMonitor>();
+builder.Services.AddScoped<IFileTransferService, FileTransferService>();
 
 // Add the hosted service that will create scoped instances of INodeHealthMonitor
 builder.Services.AddHostedService<BackgroundServiceHost<INodeHealthMonitor, NodeHealthMonitor>>();

@@ -27,5 +27,5 @@
     "HeartbeatInterval": "00:00:30",
     "NodeTags": ["storage", "backup"]
   },
-  "Urls": "http://*:5186;https://*:7109"
+  "Urls": "http://*:5186"
 }

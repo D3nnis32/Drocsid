@@ -4,7 +4,7 @@ using Drocsid.HenrikDennis2025.Core.Interfaces.Services;
 using Drocsid.HenrikDennis2025.Core.Models;
 using Microsoft.AspNetCore.Identity;
 
-namespace Drocsid.HenrikDennis2025.Server.Services;
+namespace Drocsid.HenrikDennis2025.Api.Services;
 
 public class UserService : IUserService
 {

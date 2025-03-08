@@ -1,11 +1,9 @@
-using System.Diagnostics;
-using System.Runtime.InteropServices;
 using Drocsid.HenrikDennis2025.Core.DTO;
 using Drocsid.HenrikDennis2025.Core.Interfaces.Options;
 using Drocsid.HenrikDennis2025.Core.Models;
 using Microsoft.Extensions.Options;
 
-namespace Drocsid.HenrikDennis2025.Server.Services;
+namespace Drocsid.HenrikDennis2025.Api.Services;
 
 /// <summary>
 /// Client service that registers this node with the registry service and sends periodic heartbeats
