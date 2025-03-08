@@ -30,13 +30,19 @@ namespace Logic.UI.ViewModels
         }
 
         public RelayCommand LoadChannelsCommand { get; }
+        public RelayCommand OpenNewChannelWindowCommand { get; } 
 
         public ChatInterfaceUserControlViewModel()
         {
             _httpClient = new HttpClient { BaseAddress = new Uri("http://localhost:5186/") };
             LoadChannelsCommand = new RelayCommand(async (_) => await LoadChannelsAsync());
+            OpenNewChannelWindowCommand = new RelayCommand(() => OpenNewChannelWindow());
 
             Task.Run(async () => LoadChannelsAsync());
+        }
+        private void OpenNewChannelWindow()
+        {
+            var newChannelWindow = new 
         }
         private async Task LoadChannelsAsync()
         {

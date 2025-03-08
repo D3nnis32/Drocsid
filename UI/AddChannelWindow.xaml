@@ -1,0 +1,44 @@
+﻿<Window x:Class="UI.AddChannelWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:UI"
+        mc:Ignorable="d"
+        Title="AddChannelWindow" Height="100" Width="200" Background="Transparent">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="30"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="30"/>
+        </Grid.ColumnDefinitions>
+        <StackPanel Grid.Column="1">
+            <TextBlock Text="New Channel Name: " Height="20" Foreground="White"/>
+            <Border Background="White" 
+                    CornerRadius="10"
+                    Padding="3"
+                    Margin="2">
+                <TextBox Height="20" 
+             BorderThickness="0"
+             Text="{Binding UserName, UpdateSourceTrigger=PropertyChanged}"/>
+            </Border>
+            <Button Margin="10" 
+        Width="50" 
+        HorizontalAlignment="Left"
+        Command="{Binding CreateCommand}">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                    CornerRadius="5">
+                            <TextBlock Text="Create"
+                           FontSize="10"
+                           Foreground="Black"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+        </StackPanel>
+    </Grid>
+</Window>
