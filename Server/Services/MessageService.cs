@@ -22,7 +22,7 @@ public class MessageService : IMessageService
     {
         var allMessages = await _messageRepository.FindAsync(m => m.ChannelId == channelId);
         return allMessages
-            .OrderByDescending(m => m.Timestamp)
+            .OrderByDescending(m => m.SentAt)
             .Skip(skip)
             .Take(take)
             .Reverse(); // Return in chronological order
@@ -31,7 +31,7 @@ public class MessageService : IMessageService
     public async Task<Message> CreateMessageAsync(Message message)
     {
         message.Id = Guid.NewGuid();
-        message.Timestamp = DateTime.UtcNow;
+        message.SentAt = DateTime.UtcNow;
         await _messageRepository.AddAsync(message);
         return message;
     }
@@ -39,5 +39,24 @@ public class MessageService : IMessageService
     public async Task DeleteMessageAsync(Guid messageId)
     {
         await _messageRepository.DeleteAsync(messageId);
+    }
+    
+    public async Task<Message> SyncMessageAsync(Message message)
+    {
+        // Check if message exists
+        var existingMessage = await _messageRepository.GetByIdAsync(message.Id);
+    
+        if (existingMessage != null)
+        {
+            // Update existing message
+            await _messageRepository.UpdateAsync(message);
+        }
+        else
+        {
+            // Add as new message
+            await _messageRepository.AddAsync(message);
+        }
+    
+        return message;
     }
 }

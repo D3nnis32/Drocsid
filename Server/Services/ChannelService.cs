@@ -76,4 +76,23 @@ public class ChannelService : IChannelService
             await _channelRepository.UpdateAsync(channel);
             return true;
         }
+        
+        public async Task<Channel> SyncChannelAsync(Channel channel)
+        {
+            // Check if channel exists
+            var existingChannel = await _channelRepository.GetByIdAsync(channel.Id);
+    
+            if (existingChannel != null)
+            {
+                // Update existing channel
+                await _channelRepository.UpdateAsync(channel);
+            }
+            else
+            {
+                // Add as new channel
+                await _channelRepository.AddAsync(channel);
+            }
+    
+            return channel;
+        }
     }

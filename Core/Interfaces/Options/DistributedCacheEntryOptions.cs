@@ -1,4 +1,4 @@
-namespace Drocsid.HenrikDennis2025.Core.Interfaces;
+namespace Drocsid.HenrikDennis2025.Core.Interfaces.Options;
 
 /// <summary>
 /// Represents the options used by a distributed cache entry.

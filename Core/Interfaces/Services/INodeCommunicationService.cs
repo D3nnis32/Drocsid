@@ -1,4 +1,4 @@
-namespace Drocsid.HenrikDennis2025.Core.Interfaces;
+namespace Drocsid.HenrikDennis2025.Core.Interfaces.Services;
 
 /// <summary>
 /// Defines methods for communication between nodes in a distributed system.

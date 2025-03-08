@@ -52,12 +52,12 @@ public class ApplicationDbContext : DbContext
             .HasKey(a => a.Id);
             
         modelBuilder.Entity<Attachment>()
-            .Property(a => a.FileName)
+            .Property(a => a.Filename)
             .IsRequired()
             .HasMaxLength(255);
             
         modelBuilder.Entity<Attachment>()
-            .Property(a => a.StoragePath)
+            .Property(a => a.Path)
             .IsRequired();
     }
 }

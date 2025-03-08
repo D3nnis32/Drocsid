@@ -11,4 +11,5 @@ public interface IChannelService
     Task DeleteChannelAsync(Guid channelId);
     Task<bool> AddUserToChannelAsync(Guid channelId, Guid userId);
     Task<bool> RemoveUserFromChannelAsync(Guid channelId, Guid userId);
+    Task<Channel> SyncChannelAsync(Channel channel);
 }

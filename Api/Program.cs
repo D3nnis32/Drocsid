@@ -1,6 +1,7 @@
 using System.Text;
 using Drocsid.HenrikDennis2025.Api.Hub;
 using Drocsid.HenrikDennis2025.Core.Interfaces;
+using Drocsid.HenrikDennis2025.Core.Interfaces.Options;
 using Drocsid.HenrikDennis2025.Core.Interfaces.Services;
 using Drocsid.HenrikDennis2025.Core.Models;
 using Drocsid.HenrikDennis2025.Server.Services;
@@ -33,6 +34,18 @@ builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 
 // Add PasswordHasher
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+
+builder.Services.AddHttpClient("NodeTransfer", client =>
+{
+    client.DefaultRequestHeaders.Add("User-Agent", "DrocsidNodeTransfer");
+    client.Timeout = TimeSpan.FromMinutes(5); // Longer timeout for file transfers
+});
+
+// Configure options for file transfer
+builder.Services.Configure<FileTransferOptions>(builder.Configuration.GetSection("FileTransfer"));
+
+// Add FileTransferService
+builder.Services.AddScoped<IFileTransferService, FileTransferService>();
 
 // Configure JWT authentication
 var jwtKey = builder.Configuration["Jwt:Key"];
@@ -71,6 +84,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             }
         };
     });
+
+// Add Node-to-Node authentication
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("NodeAuthorization", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        // Add custom requirements for node-to-node communication if needed
+    });
+});
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -123,6 +146,16 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+// Configure NodeRegistration options
+builder.Services.Configure<NodeRegistrationOptions>(
+    builder.Configuration.GetSection("NodeRegistration"));
+
+// Add HTTP client factory for making requests to the registry
+builder.Services.AddHttpClient();
+
+// Register the NodeRegistrationClient as a hosted service
+builder.Services.AddHostedService<NodeRegistrationClient>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline
@@ -144,5 +177,41 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<ChatHub>("/hubs/chat");
+
+// Ensure storage directory exists
+var storagePath = builder.Configuration["FileStorage:LocalPath"] ?? 
+                  Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "FileStorage");
+    
+if (!Directory.Exists(storagePath))
+{
+    Directory.CreateDirectory(storagePath);
+    // Create temp uploads directory
+    Directory.CreateDirectory(Path.Combine(storagePath, "temp"));
+}
+
+// Register this node with the registry service if configured
+var nodeId = builder.Configuration["NodeId"];
+var registryEndpoint = builder.Configuration["RegistryService:Endpoint"];
+
+if (!string.IsNullOrEmpty(nodeId) && !string.IsNullOrEmpty(registryEndpoint))
+{
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        var httpClientFactory = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        
+        logger.LogInformation("Registering node {NodeId} with registry service at {RegistryEndpoint}", 
+            nodeId, registryEndpoint);
+            
+        // Registration logic would go here
+        // In a production system, implement node registration with the registry service
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error registering node: {ex.Message}");
+        // Continue startup even if registration fails
+    }
+}
 
 app.Run();

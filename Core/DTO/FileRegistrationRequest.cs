@@ -1,42 +1,42 @@
 namespace Drocsid.HenrikDennis2025.Core.DTO;
 
 /// <summary>
-/// Request model for file registration
+/// Request for registering a file in the registry
 /// </summary>
 public class FileRegistrationRequest
 {
     /// <summary>
-    /// Unique identifier for the file
+    /// Unique ID for the file
     /// </summary>
     public string FileId { get; set; }
-    
+        
     /// <summary>
-    /// Original name of the file
+    /// Original filename
     /// </summary>
     public string FileName { get; set; }
-    
+        
     /// <summary>
-    /// MIME content type of the file
+    /// MIME type of the file
     /// </summary>
     public string ContentType { get; set; }
-    
+        
     /// <summary>
-    /// Size of the file in bytes
+    /// File size in bytes
     /// </summary>
     public long Size { get; set; }
-    
+        
     /// <summary>
-    /// IDs of nodes where the file is initially stored
+    /// List of node IDs where this file is stored
     /// </summary>
-    public List<string> NodeIds { get; set; }
-    
+    public List<string> NodeIds { get; set; } = new();
+        
     /// <summary>
-    /// Checksum hash for file integrity verification
+    /// Checksum for file integrity
     /// </summary>
     public string Checksum { get; set; }
-    
+        
     /// <summary>
-    /// Optional metadata for the file
+    /// Additional metadata
     /// </summary>
-    public Dictionary<string, string> Metadata { get; set; }
+    public Dictionary<string, string> Metadata { get; set; } = new();
 }

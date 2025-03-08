@@ -12,4 +12,5 @@ public interface IUserService
     Task UpdateUserAsync(User user);
     Task UpdateUserStatusAsync(Guid userId, UserStatus status);
     Task<bool> ValidateCredentialsAsync(string username, string password);
+    Task<bool> SyncUserAsync(User user);
 }

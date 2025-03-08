@@ -1,3 +1,5 @@
+using Drocsid.HenrikDennis2025.Core.Interfaces.Options;
+
 namespace Drocsid.HenrikDennis2025.Core.Interfaces;
 
 /// <summary>

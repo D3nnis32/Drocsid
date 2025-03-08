@@ -5,317 +5,508 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Drocsid.HenrikDennis2025.RegistryService.Services;
 
-/// <summary>
-    /// Entity Framework implementation of the node registry
-    /// </summary>
-    public class NodeRegistry : INodeRegistry
+public class NodeRegistry : INodeRegistry
+{
+    private readonly RegistryDbContext _dbContext;
+    private readonly ILogger<NodeRegistry> _logger;
+    private readonly DbContextOptions<RegistryDbContext> _options;
+
+    // Constructor for scoped service (normal usage)
+    public NodeRegistry(RegistryDbContext dbContext, ILogger<NodeRegistry> logger)
     {
-        private readonly RegistryDbContext _dbContext;
-        private readonly ILogger<NodeRegistry> _logger;
-        private readonly DbContextOptions<RegistryDbContext>? _dbContextOptions;
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _options = null;
+    }
 
-        // Constructor for regular scoped service
-        public NodeRegistry(RegistryDbContext dbContext, ILogger<NodeRegistry> logger)
+    // Constructor for singleton service (health monitor)
+    public NodeRegistry(DbContextOptions<RegistryDbContext> options, ILogger<NodeRegistry> logger)
+    {
+        _options = options ?? throw new ArgumentNullException(nameof(options));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _dbContext = null;
+    }
+
+    private (RegistryDbContext context, bool ownsContext) GetContext()
+    {
+        if (_dbContext != null)
         {
-            _dbContext = dbContext;
-            _logger = logger;
-            _dbContextOptions = null;
+            return (_dbContext, false); // DI-provided context, don't dispose
         }
-
-        // Constructor for singleton background service
-        public NodeRegistry(DbContextOptions<RegistryDbContext> dbContextOptions, ILogger<NodeRegistry> logger)
+        else if (_options != null)
         {
-            _dbContext = null!; // Not used in this constructor
-            _logger = logger;
-            _dbContextOptions = dbContextOptions;
+            return (new RegistryDbContext(_options), true); // We created this, do dispose
         }
+        
+        throw new InvalidOperationException("No valid database context available");
+    }
 
-        // Helper to get the appropriate DbContext
-        private RegistryDbContext GetContext()
+    public async Task<bool> RegisterNodeAsync(StorageNode node)
+    {
+        try
         {
-            // If we have a direct DbContext from DI, use it
-            if (_dbContext != null)
-                return _dbContext;
-            
-            // Otherwise, create a new one from options
-            if (_dbContextOptions != null)
-                return new RegistryDbContext(_dbContextOptions);
-            
-            throw new InvalidOperationException("No valid DbContext available");
-        }
-
-        public async Task<string> RegisterNodeAsync(Node node)
-        {
+            var (context, ownsContext) = GetContext();
             try
             {
-                var context = GetContext();
-                var shouldDispose = _dbContext == null;
-                
-                try
+                var existingNode = await context.Nodes.FirstOrDefaultAsync(n => n.Id == node.Id);
+
+                if (existingNode != null)
                 {
-                    // Generate ID if not provided
+                    // Update existing node
+                    _logger.LogInformation("Updating existing node: {NodeId}", node.Id);
+                    
+                    context.Entry(existingNode).CurrentValues.SetValues(node);
+                    existingNode.LastSeen = DateTime.UtcNow;
+                    
+                    // Make sure the node is marked as healthy
+                    if (existingNode.Status == null)
+                    {
+                        existingNode.Status = new NodeStatus
+                        {
+                            IsHealthy = true,
+                            CurrentLoad = 0,
+                            AvailableSpace = 0,
+                            ActiveConnections = 0,
+                            LastUpdated = DateTime.UtcNow
+                        };
+                    }
+                    else
+                    {
+                        existingNode.Status.IsHealthy = true;
+                        existingNode.Status.LastUpdated = DateTime.UtcNow;
+                    }
+                }
+                else
+                {
+                    // Add new node
+                    _logger.LogInformation("Registering new node: {NodeId}", node.Id);
+                    
+                    // Ensure node has a valid ID
                     if (string.IsNullOrEmpty(node.Id))
                     {
                         node.Id = Guid.NewGuid().ToString();
                     }
-
-                    // Set initial heartbeat
-                    node.LastHeartbeat = DateTime.UtcNow;
                     
-                    // Ensure metadata isn't null
-                    node.Metadata ??= new Dictionary<string, string>();
-
-                    await context.Nodes.AddAsync(node);
-                    await context.SaveChangesAsync();
-                    
-                    _logger.LogInformation("Registered node {NodeId} at {Endpoint}", node.Id, node.Endpoint);
-                    
-                    return node.Id;
-                }
-                finally
-                {
-                    if (shouldDispose)
+                    // Ensure node has a valid status
+                    if (node.Status == null)
                     {
-                        await context.DisposeAsync();
+                        node.Status = new NodeStatus
+                        {
+                            IsHealthy = true,
+                            CurrentLoad = 0,
+                            AvailableSpace = 0,
+                            ActiveConnections = 0,
+                            LastUpdated = DateTime.UtcNow
+                        };
                     }
+                    
+                    await context.Nodes.AddAsync(node);
                 }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error registering node {Endpoint}", node.Endpoint);
-                throw;
-            }
-        }
-
-        public async Task UpdateNodeStatusAsync(string nodeId, NodeStatus status)
-        {
-            var context = GetContext();
-            var shouldDispose = _dbContext == null;
-            
-            try
-            {
-                var node = await context.Nodes.FindAsync(nodeId);
-                if (node == null)
-                {
-                    _logger.LogWarning("Attempting to update status for non-existent node {NodeId}", nodeId);
-                    return;
-                }
-
-                // Update node properties
-                node.IsHealthy = status.IsHealthy;
-                node.CurrentLoad = status.CurrentLoad;
-                node.AvailableSpace = status.AvailableSpace;
-                node.LastHeartbeat = DateTime.UtcNow;
 
                 await context.SaveChangesAsync();
-                
-                _logger.LogDebug("Updated node {NodeId} status: Healthy={IsHealthy}, Load={Load}, Space={Space}", 
-                    nodeId, status.IsHealthy, status.CurrentLoad, status.AvailableSpace);
+                return true;
             }
             finally
             {
-                if (shouldDispose)
+                // Only dispose the context if we created it
+                if (ownsContext)
                 {
                     await context.DisposeAsync();
                 }
             }
         }
-
-        public async Task<Node?> GetNodeAsync(string nodeId)
+        catch (Exception ex)
         {
-            var context = GetContext();
-            var shouldDispose = _dbContext == null;
-            
-            try
-            {
-                return await context.Nodes.FindAsync(nodeId);
-            }
-            finally
-            {
-                if (shouldDispose)
-                {
-                    await context.DisposeAsync();
-                }
-            }
-        }
-
-        public async Task<List<Node>> GetNodesByIdsAsync(List<string> nodeIds)
-        {
-            var context = GetContext();
-            var shouldDispose = _dbContext == null;
-            
-            try
-            {
-                return await context.Nodes
-                    .Where(n => nodeIds.Contains(n.Id))
-                    .ToListAsync();
-            }
-            finally
-            {
-                if (shouldDispose)
-                {
-                    await context.DisposeAsync();
-                }
-            }
-        }
-
-        public async Task<List<Node>> GetAllNodesAsync()
-        {
-            var context = GetContext();
-            var shouldDispose = _dbContext == null;
-            
-            try
-            {
-                return await context.Nodes.ToListAsync();
-            }
-            finally
-            {
-                if (shouldDispose)
-                {
-                    await context.DisposeAsync();
-                }
-            }
-        }
-
-        public async Task<List<Node>> GetAvailableNodesAsync(int? limit = null)
-        {
-            var context = GetContext();
-            var shouldDispose = _dbContext == null;
-            
-            try
-            {
-                // Create the base query
-                var query = context.Nodes
-                    .Where(n => n.IsHealthy && 
-                               n.LastHeartbeat > DateTime.UtcNow.AddMinutes(-1));
-
-                // Apply ordering
-                var orderedQuery = query.OrderBy(n => n.CurrentLoad);
-
-                // Apply limit if provided
-                if (limit.HasValue)
-                {
-                    return await orderedQuery.Take(limit.Value).ToListAsync();
-                }
-                else
-                {
-                    return await orderedQuery.ToListAsync();
-                }
-            }
-            finally
-            {
-                if (shouldDispose)
-                {
-                    await context.DisposeAsync();
-                }
-            }
-        }
-
-        public async Task<List<Node>> SelectNodesForStorageAsync(int count, string? preferredRegion = null)
-        {
-            var context = GetContext();
-            var shouldDispose = _dbContext == null;
-            
-            try
-            {
-                // Start with healthy nodes
-                var query = context.Nodes
-                    .Where(n => n.IsHealthy && 
-                               n.LastHeartbeat > DateTime.UtcNow.AddMinutes(-1));
-
-                // Apply region preference if specified
-                if (!string.IsNullOrEmpty(preferredRegion))
-                {
-                    // First, get nodes in the preferred region
-                    var preferredNodes = await query
-                        .Where(n => n.Region == preferredRegion)
-                        .OrderByDescending(n => n.AvailableSpace)
-                        .Take(count)
-                        .ToListAsync();
-                    
-                    // If we have enough nodes in the preferred region, return them
-                    if (preferredNodes.Count >= count)
-                    {
-                        return preferredNodes;
-                    }
-                    
-                    // Otherwise, get additional nodes from other regions
-                    var remainingCount = count - preferredNodes.Count;
-                    var otherNodes = await query
-                        .Where(n => n.Region != preferredRegion)
-                        .OrderByDescending(n => n.AvailableSpace)
-                        .Take(remainingCount)
-                        .ToListAsync();
-                    
-                    // Combine the lists
-                    preferredNodes.AddRange(otherNodes);
-                    return preferredNodes;
-                }
-                else
-                {
-                    // Just order by available space if no region preference
-                    return await query
-                        .OrderByDescending(n => n.AvailableSpace)
-                        .Take(count)
-                        .ToListAsync();
-                }
-            }
-            finally
-            {
-                if (shouldDispose)
-                {
-                    await context.DisposeAsync();
-                }
-            }
-        }
-
-        public async Task MarkNodeOfflineAsync(string nodeId)
-        {
-            var context = GetContext();
-            var shouldDispose = _dbContext == null;
-            
-            try
-            {
-                var node = await context.Nodes.FindAsync(nodeId);
-                if (node != null)
-                {
-                    node.IsHealthy = false;
-                    await context.SaveChangesAsync();
-                    
-                    _logger.LogInformation("Marked node {NodeId} as offline", nodeId);
-                }
-            }
-            finally
-            {
-                if (shouldDispose)
-                {
-                    await context.DisposeAsync();
-                }
-            }
-        }
-
-        public async Task RemoveNodeAsync(string nodeId)
-        {
-            var context = GetContext();
-            var shouldDispose = _dbContext == null;
-            
-            try
-            {
-                var node = await context.Nodes.FindAsync(nodeId);
-                if (node != null)
-                {
-                    context.Nodes.Remove(node);
-                    await context.SaveChangesAsync();
-                    
-                    _logger.LogInformation("Removed node {NodeId} from registry", nodeId);
-                }
-            }
-            finally
-            {
-                if (shouldDispose)
-                {
-                    await context.DisposeAsync();
-                }
-            }
+            _logger.LogError(ex, "Error registering node: {NodeId}", node.Id);
+            return false;
         }
     }
+
+    public async Task<bool> UpdateNodeAsync(StorageNode node)
+    {
+        try
+        {
+            var (context, ownsContext) = GetContext();
+            try
+            {
+                var existingNode = await context.Nodes.FirstOrDefaultAsync(n => n.Id == node.Id);
+
+                if (existingNode == null)
+                {
+                    _logger.LogWarning("Attempted to update non-existent node: {NodeId}", node.Id);
+                    return false;
+                }
+
+                context.Entry(existingNode).CurrentValues.SetValues(node);
+                existingNode.LastSeen = DateTime.UtcNow;
+
+                await context.SaveChangesAsync();
+                return true;
+            }
+            finally
+            {
+                if (ownsContext)
+                {
+                    await context.DisposeAsync();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating node: {NodeId}", node.Id);
+            return false;
+        }
+    }
+
+    public async Task<StorageNode> GetNodeAsync(string nodeId)
+    {
+        try
+        {
+            var (context, ownsContext) = GetContext();
+            try
+            {
+                return await context.Nodes.FirstOrDefaultAsync(n => n.Id == nodeId);
+            }
+            finally
+            {
+                if (ownsContext)
+                {
+                    await context.DisposeAsync();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving node: {NodeId}", nodeId);
+            return null;
+        }
+    }
+
+    public async Task<IEnumerable<StorageNode>> GetAllNodesAsync(bool includeOffline = false)
+    {
+        try
+        {
+            var (context, ownsContext) = GetContext();
+            try
+            {
+                var query = context.Nodes.AsQueryable();
+
+                if (!includeOffline)
+                {
+                    // Filter to only include healthy nodes
+                    query = query.Where(n => n.Status.IsHealthy);
+                }
+
+                return await query.ToListAsync();
+            }
+            finally
+            {
+                if (ownsContext)
+                {
+                    await context.DisposeAsync();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving all nodes");
+            return Enumerable.Empty<StorageNode>();
+        }
+    }
+
+    public async Task<bool> MarkNodeUnhealthyAsync(string nodeId)
+    {
+        try
+        {
+            var (context, ownsContext) = GetContext();
+            try
+            {
+                var node = await context.Nodes.FirstOrDefaultAsync(n => n.Id == nodeId);
+
+                if (node == null)
+                {
+                    _logger.LogWarning("Attempted to mark non-existent node as unhealthy: {NodeId}", nodeId);
+                    return false;
+                }
+
+                node.Status.IsHealthy = false;
+                node.Status.LastUpdated = DateTime.UtcNow;
+                await context.SaveChangesAsync();
+                
+                _logger.LogInformation("Node marked as unhealthy: {NodeId}", nodeId);
+                return true;
+            }
+            finally
+            {
+                if (ownsContext)
+                {
+                    await context.DisposeAsync();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error marking node as unhealthy: {NodeId}", nodeId);
+            return false;
+        }
+    }
+
+    public async Task<bool> RemoveNodeAsync(string nodeId)
+    {
+        try
+        {
+            var (context, ownsContext) = GetContext();
+            try
+            {
+                var node = await context.Nodes.FirstOrDefaultAsync(n => n.Id == nodeId);
+
+                if (node == null)
+                {
+                    _logger.LogWarning("Attempted to remove non-existent node: {NodeId}", nodeId);
+                    return false;
+                }
+
+                context.Nodes.Remove(node);
+                await context.SaveChangesAsync();
+                
+                _logger.LogInformation("Node removed: {NodeId}", nodeId);
+                return true;
+            }
+            finally
+            {
+                if (ownsContext)
+                {
+                    await context.DisposeAsync();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error removing node: {NodeId}", nodeId);
+            return false;
+        }
+    }
+
+    public async Task<IEnumerable<StorageNode>> FindNodesAsync(
+        string region = null, 
+        IEnumerable<string> tags = null, 
+        long minAvailableStorage = 0,
+        bool healthyOnly = true)
+    {
+        try
+        {
+            var (context, ownsContext) = GetContext();
+            try
+            {
+                var query = context.Nodes.AsQueryable();
+
+                // Filter based on health status if requested
+                if (healthyOnly)
+                {
+                    query = query.Where(n => n.Status.IsHealthy);
+                }
+
+                // Filter by region if specified
+                if (!string.IsNullOrEmpty(region))
+                {
+                    query = query.Where(n => n.Region == region);
+                }
+
+                // Filter by minimum available storage
+                if (minAvailableStorage > 0)
+                {
+                    query = query.Where(n => n.Status.AvailableSpace >= minAvailableStorage);
+                }
+
+                // Get the result
+                var nodes = await query.ToListAsync();
+
+                // Filter by tags if specified (needs to be done in memory due to list property)
+                if (tags != null && tags.Any())
+                {
+                    var tagsList = tags.ToList();
+                    nodes = nodes.Where(n => 
+                        n.Tags != null && tagsList.All(t => n.Tags.Contains(t))).ToList();
+                }
+
+                return nodes;
+            }
+            finally
+            {
+                if (ownsContext)
+                {
+                    await context.DisposeAsync();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error finding nodes with specified criteria");
+            return Enumerable.Empty<StorageNode>();
+        }
+    }
+    
+    public async Task<IEnumerable<StorageNode>> GetNodesWithMostStorageAsync(int count, string region = null)
+    {
+        try
+        {
+            var (context, ownsContext) = GetContext();
+            try
+            {
+                var query = context.Nodes.Where(n => n.Status.IsHealthy);
+                
+                // Filter by region if specified
+                if (!string.IsNullOrEmpty(region))
+                {
+                    query = query.Where(n => n.Region == region);
+                }
+                
+                // Get all nodes so we can sort in memory by AvailableSpace
+                var nodes = await query.ToListAsync();
+                
+                // Order by available space and take the requested number
+                var orderedNodes = nodes
+                    .OrderByDescending(n => n.Status.AvailableSpace)
+                    .Take(count)
+                    .ToList();
+                
+                return orderedNodes;
+            }
+            finally
+            {
+                if (ownsContext)
+                {
+                    await context.DisposeAsync();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting nodes with most storage");
+            return Enumerable.Empty<StorageNode>();
+        }
+    }
+    
+    public async Task<IEnumerable<StorageNode>> GetNodesWithLowestLoadAsync(int count, string region = null)
+    {
+        try
+        {
+            var (context, ownsContext) = GetContext();
+            try
+            {
+                var query = context.Nodes.Where(n => n.Status.IsHealthy);
+                
+                // Filter by region if specified
+                if (!string.IsNullOrEmpty(region))
+                {
+                    query = query.Where(n => n.Region == region);
+                }
+                
+                // Get all nodes so we can sort in memory
+                var nodes = await query.ToListAsync();
+                
+                // Order by current load and take the requested number
+                var orderedNodes = nodes
+                    .OrderBy(n => n.Status.CurrentLoad)
+                    .ThenBy(n => n.Status.ActiveConnections)
+                    .Take(count)
+                    .ToList();
+                
+                return orderedNodes;
+            }
+            finally
+            {
+                if (ownsContext)
+                {
+                    await context.DisposeAsync();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting nodes with lowest load");
+            return Enumerable.Empty<StorageNode>();
+        }
+    }
+    
+    public async Task<IEnumerable<NodeInfo>> GetNodesByIdsAsync(List<string> nodeIds)
+    {
+        try
+        {
+            var (context, ownsContext) = GetContext();
+            try
+            {
+                var nodes = await context.Nodes
+                    .Where(n => nodeIds.Contains(n.Id))
+                    .ToListAsync();
+                
+                return nodes.Select(MapToNodeInfo).ToList();
+            }
+            finally
+            {
+                if (ownsContext)
+                {
+                    await context.DisposeAsync();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving nodes by IDs");
+            return Enumerable.Empty<NodeInfo>();
+        }
+    }
+    
+    public async Task<IEnumerable<NodeInfo>> GetAvailableNodesAsync(long minAvailableSpace = 0, string region = null)
+    {
+        try
+        {
+            var (context, ownsContext) = GetContext();
+            try
+            {
+                var query = context.Nodes.Where(n => n.Status.IsHealthy);
+                
+                // Filter by minimum available space
+                if (minAvailableSpace > 0)
+                {
+                    query = query.Where(n => n.Status.AvailableSpace >= minAvailableSpace);
+                }
+                
+                // Filter by region if specified
+                if (!string.IsNullOrEmpty(region))
+                {
+                    query = query.Where(n => n.Region == region);
+                }
+                
+                var nodes = await query.ToListAsync();
+                
+                return nodes.Select(MapToNodeInfo).ToList();
+            }
+            finally
+            {
+                if (ownsContext)
+                {
+                    await context.DisposeAsync();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving available nodes");
+            return Enumerable.Empty<NodeInfo>();
+        }
+    }
+    
+    private NodeInfo MapToNodeInfo(StorageNode node)
+    {
+        return new NodeInfo
+        {
+            Id = node.Id,
+            Endpoint = node.Endpoint,
+            Region = node.Region,
+            IsHealthy = node.Status.IsHealthy,
+            CurrentLoad = node.Status.CurrentLoad,
+            AvailableSpace = node.Status.AvailableSpace
+        };
+    }
+}

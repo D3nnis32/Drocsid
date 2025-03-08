@@ -80,4 +80,24 @@ public class UserService : IUserService
         var result = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, password);
         return result == PasswordVerificationResult.Success;
     }
+    
+    public async Task<bool> SyncUserAsync(User user)
+    {
+        // Check if user exists
+        var existingUser = await _userRepository.GetByIdAsync(user.Id);
+    
+        if (existingUser != null)
+        {
+            // Update existing user without changing password
+            user.PasswordHash = existingUser.PasswordHash; // Preserve existing password
+            await _userRepository.UpdateAsync(user);
+        }
+        else
+        {
+            // Add as new user
+            await _userRepository.AddAsync(user);
+        }
+    
+        return true;
+    }
 }

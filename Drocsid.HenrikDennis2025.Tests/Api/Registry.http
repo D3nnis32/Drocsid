@@ -1,0 +1,300 @@
+### Environment Variables
+@registryUrl = http://localhost:5000
+@storageNode1Url = http://localhost:5100
+@storageNode2Url = http://localhost:5200
+@testUsername = testuser
+@testPassword = Password123!
+@adminUsername = admin
+@adminPassword = Admin123!
+@userToken =
+
+### Test Registry Health
+GET {{registryUrl}}/api/gateway/nodes/health
+Accept: application/json
+
+### 1. User Registration and Authentication Tests
+
+### Register first test user
+POST {{registryUrl}}/api/registry/users/register
+Content-Type: application/json
+
+{
+  "username": "{{testUsername}}",
+  "email": "testuser@example.com",
+  "password": "{{testPassword}}",
+  "preferredRegion": "us-east"
+}
+
+### Register admin user
+POST {{registryUrl}}/api/registry/users/register
+Content-Type: application/json
+
+{
+  "username": "{{adminUsername}}",
+  "email": "admin@example.com",
+  "password": "{{adminPassword}}",
+  "preferredRegion": "eu-west"
+}
+
+### Connect to gateway (User Assignment)
+# This tests if users are being correctly funneled through the registry
+POST {{registryUrl}}/api/gateway/connect
+Content-Type: application/json
+
+{
+  "username": "{{testUsername}}",
+  "password": "{{testPassword}}"
+}
+
+> {%
+    client.global.set("userToken", response.body.token);
+    client.global.set("userId", response.body.userId);
+    client.global.set("assignedNodeEndpoint", response.body.nodeEndpoint);
+    client.log("User assigned to node: " + response.body.nodeEndpoint);
+%}
+
+### Connect admin to gateway
+POST {{registryUrl}}/api/gateway/connect
+Content-Type: application/json
+
+{
+  "username": "{{adminUsername}}",
+  "password": "{{adminPassword}}"
+}
+
+> {%
+    client.global.set("adminToken", response.body.token);
+    client.global.set("adminId", response.body.userId);
+    client.global.set("adminNodeEndpoint", response.body.nodeEndpoint);
+    client.log("Admin assigned to node: " + response.body.nodeEndpoint);
+%}
+
+### Get current user info from assigned node
+GET {{assignedNodeEndpoint}}/api/users/me
+Authorization: Bearer {{userToken}}
+Accept: application/json
+
+### 2. Channel Management Tests
+
+### Create a test channel
+POST {{assignedNodeEndpoint}}/api/channels
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "name": "TestChannel",
+  "type": "Public"
+}
+
+> {%
+    client.global.set("channelId", response.body.id);
+    client.log("Created channel ID: " + response.body.id);
+%}
+
+### Add admin to the channel
+POST {{assignedNodeEndpoint}}/api/channels/{{channelId}}/members
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "userId": "{{adminId}}"
+}
+
+### Get all channels for current user
+GET {{assignedNodeEndpoint}}/api/channels
+Authorization: Bearer {{userToken}}
+Accept: application/json
+
+### 3. File Storage Tests
+
+### Upload a test file to user's assigned node
+POST {{assignedNodeEndpoint}}/api/files
+Authorization: Bearer {{userToken}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+This is a test file content to verify file storage and registry functionality.
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+> {%
+    client.global.set("fileId", response.body.id);
+    client.log("Uploaded file ID: " + response.body.id);
+%}
+
+### Get file info from the registry
+GET {{registryUrl}}/api/registry/files/{{fileId}}/locations
+Accept: application/json
+
+### Get file location from gateway
+GET {{registryUrl}}/api/gateway/files/{{fileId}}/location
+Accept: application/json
+
+### Test direct file access from assigned node
+GET {{assignedNodeEndpoint}}/api/files/{{fileId}}/content
+Authorization: Bearer {{userToken}}
+Accept: */*
+
+### Test file access through registry (should redirect)
+GET {{registryUrl}}/api/gateway/files/{{fileId}}/location
+Accept: application/json
+
+> {%
+    client.global.set("fileNodeEndpoint", response.body.nodeEndpoint);
+    client.log("File is located at node: " + response.body.nodeEndpoint);
+%}
+
+###
+GET {{fileNodeEndpoint}}/api/files/{{fileId}}/content
+Authorization: Bearer {{userToken}}
+Accept: */*
+
+### 4. Replication Tests
+
+### Trigger file replication to another node
+POST {{registryUrl}}/api/registry/files/{{fileId}}/replicate?targetReplicationFactor=2
+Accept: application/json
+
+> {%
+    client.global.set("replicationSourceNode", response.body.sourceNode);
+    client.global.set("replicationTargetNodes", response.body.targetNodes);
+    client.log("Replication source: " + response.body.sourceNode);
+    client.log("Replication targets: " + JSON.stringify(response.body.targetNodes));
+%}
+
+### Verify file exists on multiple nodes after replication
+GET {{registryUrl}}/api/registry/files/{{fileId}}/locations
+Accept: application/json
+
+### 5. Message Tests
+
+### Send a message to the channel through REST API
+POST {{assignedNodeEndpoint}}/api/channels/{{channelId}}/messages
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "content": "Test message with file attachment",
+  "attachmentIds": ["{{fileId}}"]
+}
+
+> {%
+    client.global.set("messageId", response.body.id);
+    client.log("Created message ID: " + response.body.id);
+%}
+
+### Get messages from the channel
+GET {{assignedNodeEndpoint}}/api/channels/{{channelId}}/messages
+Authorization: Bearer {{userToken}}
+Accept: application/json
+
+### Check if admin can access the message from their node
+GET {{adminNodeEndpoint}}/api/channels/{{channelId}}/messages
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### 6. User Status Tests
+
+### Update user status
+PUT {{assignedNodeEndpoint}}/api/users/status
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "status": "Away"
+}
+
+### Get online users
+GET {{registryUrl}}/api/registry/users/online
+Accept: application/json
+
+### 7. Error Handling Tests
+
+### Try to access a non-existent file
+GET {{registryUrl}}/api/gateway/files/nonexistent-file-id/location
+Accept: application/json
+
+### Try to access a channel without authorization
+GET {{assignedNodeEndpoint}}/api/channels/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{userToken}}
+Accept: application/json
+
+### 8. Load Testing (Run Multiple Times)
+
+### Batch upload multiple files
+POST {{assignedNodeEndpoint}}/api/files
+Authorization: Bearer {{userToken}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="load_test1.txt"
+Content-Type: text/plain
+
+This is load test file #1.
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+POST {{assignedNodeEndpoint}}/api/files
+Authorization: Bearer {{userToken}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="load_test2.txt"
+Content-Type: text/plain
+
+This is load test file #2.
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 9. Node Health Tests
+
+### Register a new storage node with the registry
+POST {{registryUrl}}/api/nodes/register
+Content-Type: application/json
+
+{
+  "hostname": "test-storage-node",
+  "endpoint": "http://localhost:5300",
+  "region": "us-west",
+  "totalStorage": 107374182400,
+  "availableStorage": 53687091200,
+  "tags": ["test", "temporary"]
+}
+
+> {%
+    client.global.set("testNodeId", response.body.nodeId);
+    client.log("Registered test node ID: " + response.body.nodeId);
+%}
+
+### Send a heartbeat for the test node
+PUT {{registryUrl}}/api/nodes/{{testNodeId}}/heartbeat
+Content-Type: application/json
+
+{
+  "status": {
+    "isHealthy": true,
+    "currentLoad": 15.5,
+    "availableSpace": 53687091200,
+    "activeConnections": 1,
+    "lastUpdated": "{{$datetime iso8601}}"
+  }
+}
+
+### Get all healthy nodes
+GET {{registryUrl}}/api/nodes
+Accept: application/json
+
+### 10. Cleanup Tests
+
+### Delete test file
+DELETE {{assignedNodeEndpoint}}/api/files/{{fileId}}
+Authorization: Bearer {{userToken}}
+
+### Delete test message
+DELETE {{assignedNodeEndpoint}}/api/channels/{{channelId}}/messages/{{messageId}}
+Authorization: Bearer {{userToken}}
+
+### Remove admin from channel
+DELETE {{assignedNodeEndpoint}}/api/channels/{{channelId}}/members/{{adminId}}
+Authorization: Bearer {{userToken}}
