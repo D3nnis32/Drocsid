@@ -65,7 +65,7 @@ namespace Drocsid.HenrikDennis2025.Api.Controllers;
         }
 
         [HttpPost("{id}/members")]
-        public async Task<IActionResult> AddMember(Guid id, AddMemberRequest request)
+        public async Task<IActionResult> AddMember(Guid id, [FromBody] AddMemberRequest request)
         {
             var currentUserId = GetCurrentUserId();
             

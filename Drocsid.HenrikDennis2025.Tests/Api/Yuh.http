@@ -2,7 +2,8 @@
 @registryUrl = http://localhost:5261
 @nodeUrl =
 @token = 
-@userId = 
+@userId =
+@loggedInUser =
 @channelId = 
 
 ### Step 1: Register a new user through the Registry
@@ -10,9 +11,9 @@ POST {{registryUrl}}/api/registry/users/register
 Content-Type: application/json
 
 {
-  "username": "testuse43r",
+  "username": "1",
   "email": "test@example.com",
-  "password": "password123",
+  "password": "1",
   "preferredRegion": "region1"
 }
 
@@ -23,18 +24,30 @@ Content-Type: application/json
     }
 %}
 
+### Step 1: Register a new user through the Registry
+POST {{registryUrl}}/api/registry/users/register
+Content-Type: application/json
+
+{
+  "username": "2",
+  "email": "test@example.com",
+  "password": "1",
+  "preferredRegion": "region1"
+}
+
 ### Step 2: Login through the Gateway to get token and node assignment
 POST {{registryUrl}}/api/gateway/connect
 Content-Type: application/json
 
 {
-  "username": "testuse43r",
-  "password": "password123"
+  "username": "1",
+  "password": "1"
 }
 
 > {%
     if (response.status === 200) {
         client.global.set("token", response.body.token);
+        client.global.set("loggedInUser", response.body.userId)
         client.global.set("nodeUrl", response.body.nodeEndpoint)
         client.log("Received token and assigned to node: " + response.body.nodeEndpoint);
     }
@@ -47,6 +60,24 @@ Content-Type: application/json
 {
   "token": "{{token}}"
 }
+
+### Step 2: Login through the Gateway to get token and node assignment
+POST {{registryUrl}}/api/gateway/connect
+Content-Type: application/json
+
+{
+  "username": "2",
+  "password": "1"
+}
+
+> {%
+    if (response.status === 200) {
+        client.global.set("token", response.body.token);
+        client.global.set("loggedInUser", response.body.userId)
+        client.global.set("nodeUrl", response.body.nodeEndpoint)
+        client.log("Received token and assigned to node: " + response.body.nodeEndpoint);
+    }
+%}
 
 ### Step 4: Verify the token with the second storage node (this syncs the user to node2)
 POST {{nodeUrl}}/api/auth/verify-token
@@ -113,14 +144,11 @@ This is a test file content
     }
 %}
 
-### Step 11: Try to access the same user data from the second node (should work)
-GET {{nodeUrl}}/api/users/me
+### Add user to channel
+POST http://localhost:5186/api/Channels/{{channelId}}/members
+Content-Type: application/json
 Authorization: Bearer {{token}}
 
-### Step 12: Access the same channel from the second node (should work)
-GET {{nodeUrl}}/api/channels/{{channelId}}
-Authorization: Bearer {{token}}
-
-### Step 13: Access messages from the second node (should work)
-GET {{nodeUrl}}/api/channels/{{channelId}}/messages
-Authorization: Bearer {{token}}
+{
+  "userId": "{{userId}}"
+}

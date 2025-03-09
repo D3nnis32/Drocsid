@@ -68,7 +68,7 @@ namespace Logic.UI.ViewModels
 
         public LoginUserControlViewModel()
         {
-            _httpClient = new HttpClient { BaseAddress = new Uri("http://localhost:5186/") };
+            _httpClient = new HttpClient { BaseAddress = new Uri("http://localhost:5261/") };
             LoginCommand = new RelayCommand(
                 execute: Login,
                 canExecute: () => !string.IsNullOrWhiteSpace(UserName) &&
@@ -96,7 +96,7 @@ namespace Logic.UI.ViewModels
                     Password = Password
                 };
 
-                var response = await _httpClient.PostAsJsonAsync("api/auth/login", request);
+                var response = await _httpClient.PostAsJsonAsync("api/gateway/connect", request);
 
                 if (response.IsSuccessStatusCode)
                 {

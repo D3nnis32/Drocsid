@@ -98,7 +98,7 @@
                                                     Margin="0,2" 
                                                     Padding="5" 
                                                     CornerRadius="3">
-                                                <TextBlock Text="{Binding FileName}" 
+                                                <TextBlock Text="{Binding Filename}" 
                                                            Foreground="#569CD6"/>
                                             </Border>
                                         </DataTemplate>
