@@ -4,9 +4,179 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:UI"
+             xmlns:converters="clr-namespace:UI.Converters"
+             xmlns:viewmodels="clr-namespace:Logic.UI.ViewModels;assembly=Logic.UI" xmlns:local1="clr-namespace:UI.Converters"
+             d:DataContext="{d:DesignInstance Type=viewmodels:ChatViewModel}"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.Resources>
+        <!-- Define converters specific to this view -->
+        <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
+        <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
+    </UserControl.Resources>
     <Grid>
-            
+        <Grid.RowDefinitions>
+            <RowDefinition Height="50"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="60"/>
+        </Grid.RowDefinitions>
+
+        <!-- Channel Header -->
+        <Border Grid.Row="0" 
+                Background="#2D2D2D" 
+                BorderBrush="#3F3F3F" 
+                BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Text="{Binding ChannelName}" 
+                           Foreground="White" 
+                           FontWeight="Bold" 
+                           FontSize="16" 
+                           VerticalAlignment="Center" 
+                           Margin="15,0,0,0"/>
+
+                <Button Grid.Column="1" 
+                        Command="{Binding RefreshMessagesCommand}" 
+                        Content="↻" 
+                        Foreground="White" 
+                        Background="Transparent" 
+                        BorderThickness="0" 
+                        FontSize="16" 
+                        Margin="0,0,10,0"/>
+            </Grid>
+        </Border>
+
+        <!-- Messages Area -->
+        <ScrollViewer Grid.Row="1" 
+                      VerticalScrollBarVisibility="Auto" 
+                      HorizontalScrollBarVisibility="Disabled"
+                      Name="MessagesScrollViewer">
+            <ItemsControl ItemsSource="{Binding Messages}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Margin="10,5" 
+                                Padding="10" 
+                                Background="#3E3E3E" 
+                                CornerRadius="5" 
+                                HorizontalAlignment="Stretch">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <StackPanel Grid.Row="0" Orientation="Horizontal">
+                                    <TextBlock Text="{Binding SenderName}" 
+                                               Foreground="#9CDCFE" 
+                                               FontWeight="Bold"/>
+                                    <TextBlock Text=" • " Foreground="Gray"/>
+                                    <TextBlock Text="{Binding Timestamp, StringFormat=\{0:MM/dd/yyyy HH:mm\}}" 
+                                               Foreground="Gray" 
+                                               FontSize="11" 
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <TextBlock Grid.Row="1" 
+                                           Text="{Binding Content}" 
+                                           Foreground="White" 
+                                           TextWrapping="Wrap" 
+                                           Margin="0,5,0,0"/>
+
+                                <!-- Attachments if any -->
+                                <ItemsControl Grid.Row="2" 
+                                              ItemsSource="{Binding Attachments}" 
+                                              Margin="0,5,0,0"
+                                              Visibility="{Binding Attachments.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="#2D2D2D" 
+                                                    Margin="0,2" 
+                                                    Padding="5" 
+                                                    CornerRadius="3">
+                                                <TextBlock Text="{Binding FileName}" 
+                                                           Foreground="#569CD6"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <!-- Message Input Area -->
+        <Grid Grid.Row="2" Background="#2D2D2D">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Attachment Button -->
+            <Button Grid.Column="0" 
+                    Margin="10,0,0,0" 
+                    Width="40" 
+                    Height="40"
+                    Background="Transparent" 
+                    BorderThickness="0">
+                <TextBlock Text="+" 
+                           FontSize="24" 
+                           Foreground="White" 
+                           HorizontalAlignment="Center" 
+                           VerticalAlignment="Center"/>
+            </Button>
+
+            <!-- Message Text Input -->
+            <Border Grid.Column="1" 
+                    Background="#3E3E3E" 
+                    CornerRadius="5" 
+                    Margin="10,10" 
+                    Padding="10,5">
+                <TextBox Text="{Binding MessageText, UpdateSourceTrigger=PropertyChanged}" 
+                         Background="Transparent" 
+                         BorderThickness="0" 
+                         Foreground="White" 
+                         VerticalContentAlignment="Center"
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         MaxHeight="80"
+                         VerticalScrollBarVisibility="Auto"/>
+            </Border>
+
+            <!-- Send Button -->
+            <Button Grid.Column="2" 
+                    Command="{Binding SendMessageCommand}" 
+                    Margin="0,0,10,0" 
+                    Width="60" 
+                    Height="40"
+                    Background="#7289DA" 
+                    BorderThickness="0" 
+                    Style="{StaticResource DefaultButtonStyle}">
+                <TextBlock Text="Send" 
+                           Foreground="White" 
+                           HorizontalAlignment="Center" 
+                           VerticalAlignment="Center"/>
+            </Button>
+        </Grid>
+
+        <!-- Error Message -->
+        <Border Grid.Row="1" 
+                Background="#FF3333" 
+                CornerRadius="5" 
+                Margin="10" 
+                VerticalAlignment="Top" 
+                Padding="10"
+                Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibilityConverter}}">
+            <TextBlock Text="{Binding ErrorMessage}" 
+                       Foreground="White" 
+                       TextWrapping="Wrap"/>
+        </Border>
     </Grid>
 </UserControl>

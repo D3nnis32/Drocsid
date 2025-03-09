@@ -57,7 +57,7 @@ public class ApplicationDbContext : DbContext
             .HasMaxLength(255);
             
         modelBuilder.Entity<Attachment>()
-            .Property(a => a.StoragePath)
+            .Property(a => a.FilePath)
             .IsRequired();
     }
 }

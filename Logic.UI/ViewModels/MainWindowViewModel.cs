@@ -1,15 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Logic.UI.ViewModels
 {
     public class MainWindowViewModel : INotifyPropertyChanged
     {
         private object _currentView;
+
         public object CurrentView
         {
             get => _currentView;
@@ -19,16 +16,28 @@ namespace Logic.UI.ViewModels
                 OnPropertyChanged(nameof(CurrentView));
             }
         }
+
         public MainWindowViewModel()
         {
-            CurrentView = new LoginUserControlViewModel(this);
+            // Start with the login view
+            var loginViewModel = new LoginUserControlViewModel();
+            loginViewModel.LoginSuccessful += OnLoginSuccessful;
+            CurrentView = loginViewModel;
+
+            // For debugging, print what view we're starting with
+            Console.WriteLine($"DEBUG: Initial view set to {CurrentView?.GetType().Name}");
         }
-        public void NavigateToChat()
+
+        private void OnLoginSuccessful(object sender, EventArgs e)
         {
-            CurrentView = new ChatInterfaceUserControlViewModel();
+            // Switch to the chat interface view
+            var chatViewModel = new ChatInterfaceUserControlViewModel();
+            CurrentView = chatViewModel;
         }
-        public event PropertyChangedEventHandler? PropertyChanged;
-        private void OnPropertyChanged(string propertyName)
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected virtual void OnPropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }

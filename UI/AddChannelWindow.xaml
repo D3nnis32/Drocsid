@@ -3,42 +3,100 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:UI"
+        xmlns:local="clr-namespace:UI" 
+        xmlns:viewmodels="clr-namespace:Logic.UI.ViewModels;assembly=Logic.UI" 
+        xmlns:converters="clr-namespace:UI.Converters"
+        d:DataContext="{d:DesignInstance Type=viewmodels:AddChannelWindowViewModel}"
         mc:Ignorable="d"
-        Title="AddChannelWindow" Height="100" Width="200" Background="Transparent">
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="30"/>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="30"/>
-        </Grid.ColumnDefinitions>
-        <StackPanel Grid.Column="1">
-            <TextBlock Text="New Channel Name: " Height="20" Foreground="White"/>
-            <Border Background="White" 
-                    CornerRadius="10"
-                    Padding="3"
-                    Margin="2">
-                <TextBox Height="20" 
-             BorderThickness="0"
-             Text="{Binding UserName, UpdateSourceTrigger=PropertyChanged}"/>
-            </Border>
-            <Button Margin="10" 
-        Width="50" 
-        HorizontalAlignment="Left"
-        Command="{Binding CreateCommand}">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                    CornerRadius="5">
-                            <TextBlock Text="Create"
-                           FontSize="10"
-                           Foreground="Black"
-                           VerticalAlignment="Center"
-                           HorizontalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Button.Template>
-            </Button>
-        </StackPanel>
+        Title="Add New Channel" 
+        Height="250" 
+        Width="350" 
+        Background="#202225"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+    <Window.Resources>
+        <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
+    </Window.Resources>
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <TextBlock Grid.Row="0" 
+                   Text="Create a New Channel" 
+                   Foreground="White" 
+                   FontSize="18" 
+                   FontWeight="Bold" 
+                   Margin="0,0,0,15"/>
+
+        <!-- Channel Name -->
+        <TextBlock Grid.Row="1" 
+                   Text="Channel Name:" 
+                   Foreground="White" 
+                   Margin="0,0,0,5"/>
+
+        <Border Grid.Row="2" 
+                Background="#3E3E3E" 
+                CornerRadius="5" 
+                Margin="0,0,0,15">
+            <TextBox Text="{Binding ChannelName, UpdateSourceTrigger=PropertyChanged}" 
+                     Background="Transparent" 
+                     BorderThickness="0" 
+                     Foreground="White" 
+                     Padding="8,5"/>
+        </Border>
+
+        <!-- Channel Type -->
+        <TextBlock Grid.Row="3" 
+                   Text="Channel Type:" 
+                   Foreground="White" 
+                   Margin="0,0,0,5"/>
+
+        <ComboBox Grid.Row="4" 
+                  ItemsSource="{Binding AvailableChannelTypes}" 
+                  SelectedItem="{Binding ChannelType}" 
+                  Background="#3E3E3E" 
+                  Foreground="White" 
+                  Margin="0,0,0,15"/>
+
+        <!-- Error Message -->
+        <TextBlock Grid.Row="4" 
+                   Text="{Binding ErrorMessage}" 
+                   Foreground="#FF3333" 
+                   TextWrapping="Wrap" 
+                   VerticalAlignment="Bottom" 
+                   Margin="0,0,0,5"
+                   Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibilityConverter}}"/>
+
+        <!-- Buttons -->
+        <Grid Grid.Row="5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Processing Indicator -->
+            <TextBlock Grid.Column="0" 
+                       Text="Creating..." 
+                       Foreground="Gray" 
+                       VerticalAlignment="Center" 
+                       Visibility="{Binding IsCreating, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+            <!-- Create Button -->
+            <Button Grid.Column="1" 
+                    Content="Create Channel" 
+                    Command="{Binding CreateChannelCommand}" 
+                    Padding="12,6" 
+                    Background="#7289DA" 
+                    Foreground="White" 
+                    BorderThickness="0" 
+                    Style="{StaticResource DefaultButtonStyle}"/>
+        </Grid>
     </Grid>
 </Window>

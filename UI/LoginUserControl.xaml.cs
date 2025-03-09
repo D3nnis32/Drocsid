@@ -1,35 +1,39 @@
 ﻿using Logic.UI.ViewModels;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace UI
 {
-    /// <summary>
-    /// Interaction logic for LoginUserControl.xaml
-    /// </summary>
     public partial class LoginUserControl : UserControl
     {
         public LoginUserControl()
         {
             InitializeComponent();
+            Console.WriteLine("LoginUserControl initialized");
+
+            // Debug code to help understand binding issues
+            Loaded += (s, e) =>
+            {
+                Console.WriteLine("LoginUserControl loaded");
+                if (DataContext is LoginUserControlViewModel vm)
+                {
+                    Console.WriteLine("LoginUserControl has correct view model");
+                }
+                else
+                {
+                    Console.WriteLine($"WARNING: LoginUserControl has wrong DataContext: {DataContext?.GetType().Name ?? "null"}");
+                }
+            };
         }
+
         private void PasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
         {
-            if (DataContext is LoginUserControlViewModel vm)
+            // Get the PasswordBox that triggered this event
+            if (sender is PasswordBox passwordBox && DataContext is LoginUserControlViewModel viewModel)
             {
-                vm.Password = ((PasswordBox)sender).Password;
+                // Update the Password property in the ViewModel
+                viewModel.Password = passwordBox.Password;
             }
         }
     }

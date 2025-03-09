@@ -6,13 +6,34 @@
         xmlns:local="clr-namespace:UI"
         xmlns:viewModel="clr-namespace:Logic.UI.ViewModels;assembly=Logic.UI"
         mc:Ignorable="d"
-        Title="Chat App" Height="1024" Width="1920" Background="Black">
+        Title="Drocsid - Chat App" 
+        Height="768" 
+        Width="1200" 
+        Background="#202225"
+        WindowStartupLocation="CenterScreen"
+        Loaded="Window_Loaded">
     <Window.DataContext>
         <viewModel:MainWindowViewModel />
     </Window.DataContext>
-    <Grid Margin="10">
-        <ContentControl Grid.Row="1" Grid.Column="1"
-                        Content="{Binding CurrentView}">
-        </ContentControl>
+
+    <Grid>
+        <!-- Main Content -->
+        <ContentControl Content="{Binding CurrentView}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+
+        <!-- App Version -->
+        <TextBlock Text="Drocsid v1.0.0" 
+                   Foreground="#555555" 
+                   FontSize="10" 
+                   HorizontalAlignment="Right" 
+                   VerticalAlignment="Bottom" 
+                   Margin="0,0,5,2"/>
+
+        <!-- Debug info during development -->
+        <TextBlock Text="{Binding CurrentView, StringFormat='Current View: {0}'}" 
+                  Foreground="#555555" 
+                  FontSize="10" 
+                  HorizontalAlignment="Left" 
+                  VerticalAlignment="Bottom" 
+                  Margin="5,0,0,2"/>
     </Grid>
 </Window>

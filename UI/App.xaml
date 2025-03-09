@@ -3,15 +3,57 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:UI"
              xmlns:vm="clr-namespace:Logic.UI.ViewModels;assembly=Logic.UI"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
         <ResourceDictionary>
+            <!-- DataTemplates -->
+            <!-- Use ContentPresenters instead of direct control references -->
             <DataTemplate DataType="{x:Type vm:LoginUserControlViewModel}">
                 <local:LoginUserControl/>
             </DataTemplate>
             <DataTemplate DataType="{x:Type vm:ChatInterfaceUserControlViewModel}">
-                <local:ChatInterfaceUserControl />
+                <local:ChatInterfaceUserControl/>
             </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:ChatViewModel}">
+                <local:ChatUserControl/>
+            </DataTemplate>
+
+            <!-- Converters -->
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+
+            <!-- Common Styles -->
+            <Style x:Key="DefaultButtonStyle" TargetType="Button">
+                <Setter Property="Background" Value="#7289DA"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Padding" Value="10,5"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="5">
+                                <ContentPresenter HorizontalAlignment="Center" 
+                                                  VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="#5D73BC"/>
+                    </Trigger>
+                    <Trigger Property="IsPressed" Value="True">
+                        <Setter Property="Background" Value="#4E63AC"/>
+                    </Trigger>
+                    <Trigger Property="IsEnabled" Value="False">
+                        <Setter Property="Background" Value="#555555"/>
+                        <Setter Property="Foreground" Value="#999999"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

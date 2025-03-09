@@ -1,53 +1,66 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Input;
 
-namespace Logic.UI
+namespace Logic.UI.ViewModels
 {
+    // Static class to access CommandManager
+    public static class CommandManager
+    {
+        public static void InvalidateRequerySuggested()
+        {
+            System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+        }
+    }
+
     public class RelayCommand : ICommand
     {
-        public event EventHandler? CanExecuteChanged;
+        private readonly Action<object> _executeWithParam;
+        private readonly Action _execute;
+        private readonly Func<bool> _canExecute;
 
-        private readonly Action<object>? parameterMethodToExecute;
-        private readonly Action methodToExecute;
-        private readonly Func<bool>? canExecuteEvaluator;
-
-        public RelayCommand(Action methodToExecute, Func<bool>? canExecuteEvaluator = null)
+        // Constructor for commands with no parameter
+        public RelayCommand(Action execute, Func<bool> canExecute = null)
         {
-            this.methodToExecute = methodToExecute ?? throw new ArgumentNullException(nameof(methodToExecute));
-            this.canExecuteEvaluator = canExecuteEvaluator;
+            _execute = execute ?? throw new ArgumentNullException(nameof(execute));
+            _executeWithParam = null;
+            _canExecute = canExecute;
         }
 
-        public RelayCommand(Action<object> methodToExecute, Func<bool>? canExecuteEvaluator = null)
+        // Constructor for commands with parameter
+        public RelayCommand(Action<object> execute, Func<bool> canExecute = null)
         {
-            this.parameterMethodToExecute = methodToExecute ?? throw new ArgumentNullException(nameof(methodToExecute));
-            this.methodToExecute = () => methodToExecute(null!);
-            this.canExecuteEvaluator = canExecuteEvaluator;
+            _executeWithParam = execute ?? throw new ArgumentNullException(nameof(execute));
+            _execute = null;
+            _canExecute = canExecute;
         }
 
-        public bool CanExecute(object? parameter)
+        public bool CanExecute(object parameter)
         {
-            return canExecuteEvaluator?.Invoke() ?? true;
+            return _canExecute == null || _canExecute();
         }
 
-        public void Execute(object? parameter)
+        public void Execute(object parameter)
         {
-            if (methodToExecute != null)
+            if (_execute != null)
             {
-                methodToExecute.Invoke();
+                _execute();
             }
-            if (parameterMethodToExecute != null)
+            else if (_executeWithParam != null)
             {
-                parameterMethodToExecute.Invoke(parameter!);
+                _executeWithParam(parameter);
             }
         }
 
-        public void RaiseCanExecuteChanged()
+        public event EventHandler CanExecuteChanged
         {
-            CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+            add { System.Windows.Input.CommandManager.RequerySuggested += value; }
+            remove { System.Windows.Input.CommandManager.RequerySuggested -= value; }
+        }
+
+        // Add this method to allow manual triggering of CanExecute evaluation
+        public void InvalidateCanExecute()
+        {
+            System.Windows.Input.CommandManager.InvalidateRequerySuggested();
         }
     }
 }

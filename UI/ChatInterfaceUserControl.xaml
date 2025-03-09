@@ -3,66 +3,96 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:UI"
+             xmlns:local="clr-namespace:UI" 
+             xmlns:converters="clr-namespace:UI.Converters"
+             xmlns:viewmodels="clr-namespace:Logic.UI.ViewModels;assembly=Logic.UI" xmlns:local1="clr-namespace:UI.Converters"
+             d:DataContext="{d:DesignInstance Type=viewmodels:ChatInterfaceUserControlViewModel}"
              mc:Ignorable="d" 
              d:DesignHeight="400" d:DesignWidth="800">
+    <UserControl.Resources>
+        <!-- Add this converter definition -->
+        <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+    </UserControl.Resources>
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="1*"/>
             <ColumnDefinition Width="3*"/>
         </Grid.ColumnDefinitions>
+
+        <!-- Channels Sidebar -->
         <Grid Grid.Column="0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="40"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
+
+            <!-- Search and Add Channel Header -->
             <Grid Grid.Row="0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="40"/>
+                    <ColumnDefinition Width="40"/>
                 </Grid.ColumnDefinitions>
+
+                <!-- Search Box -->
                 <Grid Grid.Column="0">
                     <Border Margin="5,5,0,5"
                             VerticalAlignment="Stretch"
                             Background="White"
                             CornerRadius="5">
-                        <TextBox Margin="5,0,5,0" BorderThickness="0" VerticalAlignment="Center" x:Name="tb" Text="" />
+                        <TextBox Margin="5,0,5,0" 
+                                BorderThickness="0" 
+                                VerticalAlignment="Center" 
+                                x:Name="SearchTextBox" 
+                                Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}">
+                            <TextBox.Style>
+                                <Style TargetType="TextBox">
+                                    <Style.Resources>
+                                        <VisualBrush x:Key="HintBrush" TileMode="None" Opacity="0.5" Stretch="None" AlignmentX="Left">
+                                            <VisualBrush.Visual>
+                                                <TextBlock Text="Search channels..." />
+                                            </VisualBrush.Visual>
+                                        </VisualBrush>
+                                    </Style.Resources>
+                                    <Style.Triggers>
+                                        <Trigger Property="Text" Value="{x:Null}">
+                                            <Setter Property="Background" Value="{StaticResource HintBrush}" />
+                                        </Trigger>
+                                        <Trigger Property="Text" Value="">
+                                            <Setter Property="Background" Value="{StaticResource HintBrush}" />
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBox.Style>
+                        </TextBox>
                     </Border>
-                    <Popup Width="{Binding RelativeSource={RelativeSource Self},
-                              Path=PlacementTarget.ActualWidth}"
-                              Placement="Bottom"
-                              PlacementTarget="{Binding ElementName=tb}">
-                        <Popup.Style>
-                            <Style TargetType="{x:Type Popup}">
-                                <Setter Property="IsOpen"
-                                    Value="False" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding ElementName=tb,
-                                                 Path=IsFocused}"
-                                                 Value="True">
-                                        <Setter Property="IsOpen"
-                                                Value="True" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Popup.Style>
-                        <ListBox>
-                            <ListBoxItem Content="A" />
-                            <ListBoxItem Content="B" />
-                        </ListBox>
-                    </Popup>
                 </Grid>
+
+                <!-- Refresh Button -->
                 <Grid Grid.Column="1">
-                    <Button Margin="5">+</Button>
+                    <Button Margin="5" 
+                            Command="{Binding LoadChannelsCommand}" 
+                            Content="↻" 
+                            ToolTip="Refresh Channels"/>
+                </Grid>
+
+                <!-- Add Channel Button -->
+                <Grid Grid.Column="2">
+                    <Button Margin="5" 
+                            Command="{Binding OpenNewChannelWindowCommand}" 
+                            Content="+" 
+                            ToolTip="Add New Channel"/>
                 </Grid>
             </Grid>
+
+            <!-- Channels List -->
             <Grid Grid.Row="1">
                 <ListView ItemsSource="{Binding Channels}"
                           Background="Transparent"
                           BorderThickness="0"
                           Margin="2"
                           Foreground="White"
-                          SelectedItem="{Binding SelectedChannel, Mode=TwoWay}" d:ItemsSource="{d:SampleData ItemCount=5}">
+                          SelectedItem="{Binding SelectedChannel, Mode=TwoWay}">
                     <ListView.Resources>
                         <Style TargetType="GridViewColumnHeader">
                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -70,7 +100,6 @@
                     </ListView.Resources>
                     <ListView.ItemContainerStyle>
                         <Style TargetType="ListViewItem">
-                            <!-- ✅ Remove any default selection border/effect -->
                             <Setter Property="BorderThickness" Value="0"/>
                             <Setter Property="BorderBrush" Value="Transparent"/>
                             <Setter Property="Background" Value="Transparent"/>
@@ -80,16 +109,11 @@
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
 
                             <Style.Triggers>
-                                <!-- 🟡 Fix Hover Effect -->
                                 <Trigger Property="IsMouseOver" Value="True">
                                     <Setter Property="Background" Value="#3C3F45"/>
-                                    <!-- Slightly lighter gray -->
                                 </Trigger>
-
-                                <!-- 🔵 Fix Selection Effect (Uniform Color) -->
                                 <Trigger Property="IsSelected" Value="True">
                                     <Setter Property="Background" Value="#3E4148"/>
-                                    <!-- Slightly lighter gray when selected -->
                                     <Setter Property="Foreground" Value="White"/>
                                     <Setter Property="FontWeight" Value="Bold"/>
                                 </Trigger>
@@ -99,79 +123,38 @@
                     <ListView.View>
                         <GridView>
                             <GridView.Columns>
-                                <GridViewColumn Width="auto" DisplayMemberBinding="{Binding Name}"/>
+                                <GridViewColumn Width="300" DisplayMemberBinding="{Binding Name}"/>
                             </GridView.Columns>
                         </GridView>
                     </ListView.View>
                 </ListView>
+
+                <!-- Loading Indicator -->
+                <Grid Background="#99000000" 
+                      Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <TextBlock Text="Loading..." 
+                                   Foreground="White" 
+                                   HorizontalAlignment="Center"/>
+                        <ProgressBar IsIndeterminate="True" 
+                                     Width="150" 
+                                     Height="10" 
+                                     Margin="0,10,0,0"/>
+                    </StackPanel>
+                </Grid>
             </Grid>
         </Grid>
-        <Grid Grid.Column="1">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="50"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="40"/>
-            </Grid.RowDefinitions>
-            <Grid Grid.Row="0">
 
-            </Grid>
-            <Grid Grid.Row="1">
-                <ContentControl Grid.Row="1" 
-                                Grid.Column="1"
-                                Content="{Binding CurrentView}">
-                </ContentControl>
-            </Grid>
-            <Grid Grid.Row="2">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="40"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="60"/>
-                </Grid.ColumnDefinitions>
-                <Grid Grid.Row="0">
-                    <Button Margin="2">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border Background="{TemplateBinding Background}"
-                                        CornerRadius="20">
-                                    <TextBlock Text="+"
-                                               FontSize="16"
-                                               Foreground="Black"
-                                               VerticalAlignment="Center"
-                                               HorizontalAlignment="Center"/>
-                                </Border>
-                            </ControlTemplate>
-                        </Button.Template>
-                    </Button>
-                </Grid>
-                <Grid Grid.Column="1">
-                    <Border Background="White" 
-                            CornerRadius="10"
-                            Padding="5"
-                            Margin="2">
-                        <TextBox Foreground="Black" 
-                                 FontSize="16"
-                                 HorizontalAlignment="Stretch"
-                                 VerticalAlignment="Center" 
-                                 BorderThickness="0"/>
-                    </Border>
-                </Grid>
-                <Grid Grid.Column="2">
-                    <Button Margin="2">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border Background="{TemplateBinding Background}"
-                    CornerRadius="20">
-                                    <TextBlock Text="Send"
-                           FontSize="16"
-                           Foreground="Black"
-                           VerticalAlignment="Center"
-                           HorizontalAlignment="Center"/>
-                                </Border>
-                            </ControlTemplate>
-                        </Button.Template>
-                    </Button>
-                </Grid>
-            </Grid>
+        <!-- Chat Content Area -->
+        <Grid Grid.Column="1">
+            <ContentControl Content="{Binding CurrentView}"/>
+
+            <!-- No Channel Selected Message -->
+            <TextBlock Text="Select a channel from the list or create a new one."
+                       Foreground="Gray"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       Visibility="{Binding SelectedChannel, Converter={StaticResource NullToVisibilityConverter}}"/>
         </Grid>
     </Grid>
 </UserControl>

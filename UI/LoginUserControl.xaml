@@ -4,6 +4,8 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:UI"
+             xmlns:viewmodels="clr-namespace:Logic.UI.ViewModels;assembly=Logic.UI"
+             d:DataContext="{d:DesignInstance Type=viewmodels:LoginUserControlViewModel}"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid>
@@ -19,10 +21,10 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <Grid Grid.Column="1" Grid.Row="1">
-            <Image Source="pack://application:,,,/Resources/DrocsidLogo.png" Stretch="Uniform"/>
+            <TextBlock Text="DROCSID" FontSize="32" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/>
         </Grid>
         <Grid Grid.Column="1" Grid.Row="2">
-            <StackPanel >
+            <StackPanel>
                 <TextBlock Text="Username: " Height="20" Foreground="White"/>
                 <Border Background="White" 
                         CornerRadius="10"
@@ -69,15 +71,11 @@
                                 <DataTrigger Binding="{Binding ErrorMessage}" Value="{x:Null}">
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                 </DataTrigger>
-                                <DataTrigger Binding="{Binding ErrorMessage}">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </TextBlock.Style>
                 </TextBlock>
             </StackPanel>
         </Grid>
-
     </Grid>
 </UserControl>
