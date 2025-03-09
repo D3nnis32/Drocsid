@@ -9,12 +9,16 @@ namespace Drocsid.HenrikDennis2025.Api.Controllers;
 [ApiController]
     [Route("api/channels/{channelId}/[controller]")]
     [Authorize]
-    public class MessagesController : ControllerBase
+    public class MessagesController : BaseController
     {
         private readonly IMessageService _messageService;
         private readonly IChannelService _channelService;
 
-        public MessagesController(IMessageService messageService, IChannelService channelService)
+        public MessagesController(
+            IMessageService messageService, 
+            IChannelService channelService,
+            ILogger<MessagesController> logger) 
+            : base(logger)
         {
             _messageService = messageService;
             _channelService = channelService;
@@ -95,12 +99,5 @@ namespace Drocsid.HenrikDennis2025.Api.Controllers;
 
             await _messageService.DeleteMessageAsync(id);
             return NoContent();
-        }
-
-        private Guid GetCurrentUserId()
-        {
-            // In a real application, get this from the authenticated user claims
-            // For now, return a dummy user ID
-            return new Guid("11111111-1111-1111-1111-111111111111");
         }
     }

@@ -37,10 +37,10 @@ CREATE TABLE IF NOT EXISTS "Files" (
     "CreatedAt" timestamp with time zone NOT NULL,
     "ModifiedAt" timestamp with time zone NOT NULL,
     "OwnerId" text NOT NULL,
-    "Tags" jsonb NOT NULL DEFAULT '[]'::jsonb,
+    "Tags" text NOT NULL DEFAULT '[]',
     "LastAccessed" timestamp with time zone NULL,
-    "Metadata" jsonb NOT NULL DEFAULT '{}'::jsonb,
-    "NodeLocations" jsonb NOT NULL DEFAULT '[]'::jsonb,
+    "Metadata" text NOT NULL DEFAULT '{}',
+    "NodeLocations" text NOT NULL DEFAULT '[]',
     CONSTRAINT "PK_Files" PRIMARY KEY ("Id")
 );
 
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS "Channels" (
     "Type" integer NOT NULL,
     "CreatedAt" timestamp with time zone NOT NULL,
     "UpdatedAt" timestamp with time zone NOT NULL,
-    "MemberIds" jsonb NOT NULL DEFAULT '[]'::jsonb,
+    "MemberIds" text NOT NULL DEFAULT '[]',
     CONSTRAINT "PK_Channels" PRIMARY KEY ("Id")
 );
 
@@ -140,6 +140,77 @@ CREATE INDEX "IX_Attachments_MessageId" ON "Attachments" ("MessageId");
 CREATE INDEX "IX_UserChannels_ChannelId" ON "UserChannels" ("ChannelId");
 CREATE INDEX "IX_ChannelNodes_NodeId" ON "ChannelNodes" ("NodeId");
 CREATE INDEX "IX_MessageLocations_NodeId" ON "MessageLocations" ("NodeId");
+
+-- Add unique constraint for username
+ALTER TABLE "Users" ADD CONSTRAINT "UQ_Users_Username" UNIQUE ("Username");
+
+\connect drocsid;
+
+-- Create Users table
+CREATE TABLE IF NOT EXISTS "Users" (
+    "Id" uuid NOT NULL,
+    "Username" varchar(50) NOT NULL,
+    "Email" varchar(100) NOT NULL,
+    "Status" integer NOT NULL,
+    "LastSeen" timestamp with time zone NOT NULL,
+    "PasswordHash" varchar(100) NULL,
+    "CreatedAt" timestamp with time zone NOT NULL,
+    "UpdatedAt" timestamp with time zone NOT NULL,
+    "PreferredRegion" varchar(50) NULL,
+    "CurrentNodeId" varchar(50) NULL,
+    CONSTRAINT "PK_Users" PRIMARY KEY ("Id")
+);
+
+-- Create Channels table
+CREATE TABLE IF NOT EXISTS "Channels" (
+    "Id" uuid NOT NULL,
+    "Name" varchar(100) NOT NULL,
+    "Type" integer NOT NULL,
+    "CreatedAt" timestamp with time zone NOT NULL,
+    "UpdatedAt" timestamp with time zone NOT NULL,
+    "MemberIds" text NOT NULL DEFAULT '[]',
+    CONSTRAINT "PK_Channels" PRIMARY KEY ("Id")
+);
+
+-- Create Messages table
+CREATE TABLE IF NOT EXISTS "Messages" (
+    "Id" uuid NOT NULL,
+    "ChannelId" uuid NOT NULL,
+    "SenderId" uuid NOT NULL,
+    "Content" text NOT NULL,
+    "SentAt" timestamp with time zone NOT NULL,
+    "EditedAt" timestamp with time zone NULL,
+    "SenderName" varchar(100) NULL,
+    "Timestamp" timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "PK_Messages" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_Messages_Channels_ChannelId" FOREIGN KEY ("ChannelId") REFERENCES "Channels" ("Id") ON DELETE CASCADE,
+    CONSTRAINT "FK_Messages_Users_SenderId" FOREIGN KEY ("SenderId") REFERENCES "Users" ("Id") ON DELETE CASCADE
+);
+
+-- Create Attachments table
+CREATE TABLE IF NOT EXISTS "Attachments" (
+    "Id" uuid NOT NULL,
+    "Filename" varchar(255) NOT NULL,
+    "ContentType" varchar(100) NOT NULL,
+    "Path" varchar(500) NOT NULL,
+    "Size" bigint NOT NULL,
+    "UploadedAt" timestamp with time zone NOT NULL,
+    "StoragePath" varchar(500) NULL,
+    "MessageId" uuid NULL,
+    CONSTRAINT "PK_Attachments" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_Attachments_Messages_MessageId" FOREIGN KEY ("MessageId") REFERENCES "Messages" ("Id") ON DELETE CASCADE
+);
+
+-- Create indexes for better query performance
+CREATE INDEX IF NOT EXISTS "IX_Users_Username" ON "Users" ("Username");
+CREATE INDEX IF NOT EXISTS "IX_Users_Email" ON "Users" ("Email");
+CREATE INDEX IF NOT EXISTS "IX_Users_Status" ON "Users" ("Status");
+
+CREATE INDEX IF NOT EXISTS "IX_Messages_ChannelId" ON "Messages" ("ChannelId");
+CREATE INDEX IF NOT EXISTS "IX_Messages_SenderId" ON "Messages" ("SenderId");
+CREATE INDEX IF NOT EXISTS "IX_Messages_SentAt" ON "Messages" ("SentAt");
+
+CREATE INDEX IF NOT EXISTS "IX_Attachments_MessageId" ON "Attachments" ("MessageId");
 
 -- Add unique constraint for username
 ALTER TABLE "Users" ADD CONSTRAINT "UQ_Users_Username" UNIQUE ("Username");

@@ -25,7 +25,9 @@
       "NodeEndpoint": "http://localhost:5186",
       "DataDirectory": "/app/FileStorage",
       "HeartbeatInterval": "00:00:30",
-      "NodeTags": ["storage", "main"]
+      "NodeTags": ["storage", "main"],
+      "DefaultTotalStorage": 53687091200,
+      "DefaultAvailableStorage": 26843545600
     },
     "FileTransfer": {
       "MaxConcurrentTransfersPerNode": 3,
@@ -40,5 +42,6 @@
     "NodeApiEndpoint": "http://localhost:5186",
     "RegistryService": {
       "Endpoint": "http://registry-service:5261"
-    }
-  }
+    },
+    "Urls": "http://*:5186"
+}

@@ -45,7 +45,7 @@ public class NodeRegistrationClient : BackgroundService
                 }
                 else
                 {
-                    _totalStorage = unchecked(1024 * 1024 * 1024 * 50); // Default 50GB if directory doesn't exist yet
+                    _totalStorage = _options.DefaultTotalStorage; // Default 50GB if directory doesn't exist yet
                     
                     // Create directory
                     Directory.CreateDirectory(_options.DataDirectory);
@@ -54,12 +54,12 @@ public class NodeRegistrationClient : BackgroundService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error calculating total storage for data directory");
-                _totalStorage = unchecked(1024 * 1024 * 1024 * 50); // Default 50GB
+                _totalStorage = _options.DefaultTotalStorage;
             }
         }
         else
         {
-            _totalStorage = unchecked(1024 * 1024 * 1024 * 50); // Default 50GB
+            _totalStorage = _options.DefaultTotalStorage;
         }
         
         // Generate a default node ID if not specified
@@ -298,12 +298,12 @@ public class NodeRegistrationClient : BackgroundService
                 }
             }
             
-            return unchecked(1024 * 1024 * 1024 * 25); // Default 25GB
+            return _options.DefaultAvailableStorage;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error calculating available storage");
-            return unchecked(1024 * 1024 * 1024 * 25); // Default 25GB
+            return _options.DefaultAvailableStorage;
         }
     }
 
@@ -335,8 +335,24 @@ public class NodeRegistrationClient : BackgroundService
     /// </summary>
     private int CalculateActiveConnections()
     {
-        // In a real implementation, you would track actual connection count
-        // For now, we'll return a dummy value
-        return 0;
+        try
+        {
+            // Use System.Net.NetworkInformation to get current TCP connection information
+            var tcpConnections = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties()
+                .GetActiveTcpConnections();
+            
+            // Filter connections by established state
+            var activeConnections = tcpConnections.Count(conn => 
+                conn.State == System.Net.NetworkInformation.TcpState.Established);
+            
+            _logger.LogDebug("Calculated {ActiveConnections} active TCP connections", activeConnections);
+        
+            return activeConnections;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calculating active connections");
+            return 0; // Fall back to 0 in case of error
+        }
     }
 }

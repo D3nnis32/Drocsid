@@ -2,7 +2,7 @@
 @registryUrl = http://localhost:5261
 @storageNode1Url =
 @storageNode2Url =
-@testUsername = testuser
+@testUsername = testuser23
 @testPassword = Password123!
 @adminUsername = admin
 @adminPassword = Admin123!
@@ -25,7 +25,7 @@ Content-Type: application/json
   "username": "{{testUsername}}",
   "email": "testuser@example.com",
   "password": "{{testPassword}}",
-  "preferredRegion": "us-east"
+  "preferredRegion": "local"
 }
 
 ### Register admin user

@@ -39,4 +39,14 @@ public class NodeRegistrationOptions
     /// How often to send heartbeats to the registry
     /// </summary>
     public TimeSpan HeartbeatInterval { get; set; } = TimeSpan.FromMinutes(1);
+    
+    /// <summary>
+    /// Default total storage capacity for this node in bytes (50GB default)
+    /// </summary>
+    public long DefaultTotalStorage { get; set; } = 50L * 1024 * 1024 * 1024;
+    
+    /// <summary>
+    /// Default available storage if actual size cannot be calculated (25GB default)
+    /// </summary>
+    public long DefaultAvailableStorage { get; set; } = 25L * 1024 * 1024 * 1024;
 }

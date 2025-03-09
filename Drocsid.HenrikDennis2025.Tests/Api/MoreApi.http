@@ -1,0 +1,77 @@
+### Variables
+@baseUrl = http://localhost:5186
+@registryUrl = http://localhost:5261
+@token =
+@channelId =
+
+### Register a new user (directly to storage node)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "password": "password123",
+  "email": "test@example.com"
+}
+
+### Login to the system (through registry gateway)
+# This obtains a token and gives you the node to connect to
+POST {{registryUrl}}/api/gateway/connect
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "password": "password123"
+}
+
+### Login directly to a storage node
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "password": "password123"
+}
+
+### Create a channel (requires authentication)
+POST {{baseUrl}}/api/channels
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "General Discussion",
+  "type": 0
+}
+
+### Get user channels
+GET {{baseUrl}}/api/channels
+Authorization: Bearer {{token}}
+
+### Get a specific channel
+GET {{baseUrl}}/api/channels/{{channelId}}
+Authorization: Bearer {{token}}
+
+### Send a message to a channel
+POST {{baseUrl}}/api/channels/{{channelId}}/messages
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "content": "Hello, world!"
+}
+
+### Get messages from a channel
+GET {{baseUrl}}/api/channels/{{channelId}}/messages
+Authorization: Bearer {{token}}
+
+### Upload a file
+POST {{baseUrl}}/api/files
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Authorization: Bearer {{token}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+This is a test file content
+------WebKitFormBoundary7MA4YWxkTrZu0gW--

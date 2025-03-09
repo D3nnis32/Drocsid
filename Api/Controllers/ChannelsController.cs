@@ -9,11 +9,14 @@ namespace Drocsid.HenrikDennis2025.Api.Controllers;
 [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class ChannelsController : ControllerBase
+    public class ChannelsController : BaseController
     {
         private readonly IChannelService _channelService;
 
-        public ChannelsController(IChannelService channelService)
+        public ChannelsController(
+            IChannelService channelService,
+            ILogger<ChannelsController> logger)
+            : base(logger)
         {
             _channelService = channelService;
         }
@@ -114,12 +117,5 @@ namespace Drocsid.HenrikDennis2025.Api.Controllers;
             }
 
             return NoContent();
-        }
-
-        private Guid GetCurrentUserId()
-        {
-            // In a real application, get this from the authenticated user claims
-            // For now, return a dummy user ID
-            return new Guid("11111111-1111-1111-1111-111111111111");
         }
     }

@@ -1,4 +1,5 @@
 using System.Text;
+using Drocsid.HenrikDennis2025.Api.Controllers;
 using Drocsid.HenrikDennis2025.Api.Hub;
 using Drocsid.HenrikDennis2025.Api.Services;
 using Drocsid.HenrikDennis2025.Core.Interfaces;
@@ -31,6 +32,8 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IChannelService, ChannelService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
+
+builder.Services.AddScoped<ILogger<BaseController>, Logger<BaseController>>();
 
 // Add PasswordHasher
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();

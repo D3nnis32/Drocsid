@@ -10,11 +10,10 @@ public class Message
     public Guid Id { get; set; }
     public Guid ChannelId { get; set; }
     public Guid SenderId { get; set; }
-    public string SenderName { get; set; } // Added for UI display
+    public string SenderName { get; set; }
     public string Content { get; set; }
     public DateTime SentAt { get; set; } = DateTime.UtcNow;
     public DateTime? EditedAt { get; set; }
-    public List<Attachment> Attachments { get; set; } = new List<Attachment>();
-    // Adding the missing property
+    public List<Attachment> Attachments { get; set; } = new();
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 }

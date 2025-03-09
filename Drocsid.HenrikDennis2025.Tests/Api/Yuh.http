@@ -1,0 +1,126 @@
+### Variables
+@registryUrl = http://localhost:5261
+@nodeUrl =
+@token = 
+@userId = 
+@channelId = 
+
+### Step 1: Register a new user through the Registry
+POST {{registryUrl}}/api/registry/users/register
+Content-Type: application/json
+
+{
+  "username": "testuse3r",
+  "email": "test@example.com",
+  "password": "password123",
+  "preferredRegion": "region1"
+}
+
+> {%
+    if (response.status === 200) {
+        client.global.set("userId", response.body.userId);
+        client.log("User registered with ID: " + response.body.userId);
+    }
+%}
+
+### Step 2: Login through the Gateway to get token and node assignment
+POST {{registryUrl}}/api/gateway/connect
+Content-Type: application/json
+
+{
+  "username": "testuse3r",
+  "password": "password123"
+}
+
+> {%
+    if (response.status === 200) {
+        client.global.set("token", response.body.token);
+        client.global.set("nodeUrl", response.body.nodeEndpoint)
+        client.log("Received token and assigned to node: " + response.body.nodeEndpoint);
+    }
+%}
+
+### Step 3: Verify the token with the first storage node (this syncs the user to node1)
+POST {{nodeUrl}}/api/auth/verify-token
+Content-Type: application/json
+
+{
+  "token": "{{token}}"
+}
+
+### Step 4: Verify the token with the second storage node (this syncs the user to node2)
+POST {{nodeUrl}}/api/auth/verify-token
+Content-Type: application/json
+
+{
+  "token": "{{token}}"
+}
+
+### Step 5: Get current user info (from node1) to confirm everything works
+GET {{nodeUrl}}/api/users/me
+Authorization: Bearer {{token}}
+
+### Step 6: Create a new channel
+POST {{nodeUrl}}/api/channels
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "General Discussion",
+  "type": 0
+}
+
+> {%
+    if (response.status === 201) {
+        client.global.set("channelId", response.body.id);
+        client.log("Channel created with ID: " + response.body.id);
+    }
+%}
+
+### Step 7: List all channels the user belongs to
+GET {{nodeUrl}}/api/channels
+Authorization: Bearer {{token}}
+
+### Step 8: Send a message to the channel
+POST {{nodeUrl}}/api/channels/{{channelId}}/messages
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "content": "Hello, this is a test message!"
+}
+
+### Step 9: Get messages from the channel
+GET {{nodeUrl}}/api/channels/{{channelId}}/messages
+Authorization: Bearer {{token}}
+
+### Step 10: Upload a file
+POST {{nodeUrl}}/api/files
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Authorization: Bearer {{token}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+This is a test file content
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+> {%
+    if (response.status === 200) {
+        client.global.set("fileId", response.body.id);
+        client.log("File uploaded with ID: " + response.body.id);
+    }
+%}
+
+### Step 11: Try to access the same user data from the second node (should work)
+GET {{nodeUrl}}/api/users/me
+Authorization: Bearer {{token}}
+
+### Step 12: Access the same channel from the second node (should work)
+GET {{nodeUrl}}/api/channels/{{channelId}}
+Authorization: Bearer {{token}}
+
+### Step 13: Access messages from the second node (should work)
+GET {{nodeUrl}}/api/channels/{{channelId}}/messages
+Authorization: Bearer {{token}}

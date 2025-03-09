@@ -22,10 +22,26 @@
     "NodeId": "node3",
     "NodeRegion": "region3",
     "RegistryUrl": "http://registry-service:5261",
-    "NodeEndpoint": "http://localhost:5186",
+    "NodeEndpoint": "http://localhost:5188",
     "DataDirectory": "/app/FileStorage",
     "HeartbeatInterval": "00:00:30",
-    "NodeTags": ["storage", "archive"]
+    "NodeTags": ["storage", "archive"],
+    "DefaultTotalStorage": 53687091200,
+    "DefaultAvailableStorage": 26843545600
   },
-  "Urls": "http://*:5186"
+  "FileTransfer": {
+    "MaxConcurrentTransfersPerNode": 3,
+    "TransferTimeout": "00:30:00",
+    "MaxDirectTransferSize": 104857600,
+    "RetryAttempts": 3,
+    "RetryDelay": "00:00:10"
+  },
+  "NodeId": "node3",
+  "NodeRegion": "region3",
+  "NodeHostname": "drocsid-storage-3",
+  "NodeApiEndpoint": "http://localhost:5188",
+  "RegistryService": {
+    "Endpoint": "http://registry-service:5261"
+  },
+    "Urls": "http://*:5186"
 }
