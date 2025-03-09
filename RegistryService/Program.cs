@@ -140,13 +140,45 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-app.Use(async (context, next) =>
-{
-    var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-    logger.LogInformation("Request received: {Method} {Path}", 
-        context.Request.Method, context.Request.Path);
+// Add explicit health check endpoint
+app.MapGet("/health", () => {
+    return Results.Ok(new { status = "healthy" });
+});
+
+app.MapGet("/health/db", async (IServiceProvider serviceProvider) => {
+    using var scope = serviceProvider.CreateScope();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    var dbContext = scope.ServiceProvider.GetRequiredService<RegistryDbContext>();
     
-    await next();
+    try {
+        logger.LogInformation("Checking database connection...");
+        bool canConnect = await dbContext.Database.CanConnectAsync();
+        
+        if (!canConnect) {
+            logger.LogError("Cannot connect to database");
+            return Results.Problem("Cannot connect to database");
+        }
+        
+        // Try to create the database schema
+        logger.LogInformation("Ensuring database schema exists...");
+        
+        // Check if it worked by querying the tables
+        var tables = await dbContext.Database
+            .SqlQuery<string>($"SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+            .ToListAsync();
+        
+        logger.LogInformation("Tables in database: {Tables}", string.Join(", ", tables));
+        
+        return Results.Ok(new { 
+            status = "healthy", 
+            dbConnection = true,
+            tables = tables 
+        });
+    }
+    catch (Exception ex) {
+        logger.LogError(ex, "Error checking database status");
+        return Results.Problem(ex.Message);
+    }
 });
 
 // With this more robust version:
@@ -195,44 +227,5 @@ using (var scope = app.Services.CreateScope())
         logger.LogError(ex, "Error during database initialization");
     }
 }
-
-app.MapGet("/health/db", async (IServiceProvider serviceProvider) => {
-    using var scope = serviceProvider.CreateScope();
-    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-    var dbContext = scope.ServiceProvider.GetRequiredService<RegistryDbContext>();
-    
-    try {
-        logger.LogInformation("Checking database connection...");
-        bool canConnect = await dbContext.Database.CanConnectAsync();
-        
-        if (!canConnect) {
-            logger.LogError("Cannot connect to database");
-            return Results.Problem("Cannot connect to database");
-        }
-        
-        // Try to create the database schema
-        logger.LogInformation("Ensuring database schema exists...");
-        
-        // Force creation - this will create the tables if they don't exist
-        await dbContext.Database.EnsureCreatedAsync();
-        
-        // Check if it worked by querying the tables
-        var tables = await dbContext.Database
-            .SqlQuery<string>($"SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
-            .ToListAsync();
-        
-        logger.LogInformation("Tables in database: {Tables}", string.Join(", ", tables));
-        
-        return Results.Ok(new { 
-            status = "healthy", 
-            dbConnection = true,
-            tables = tables 
-        });
-    }
-    catch (Exception ex) {
-        logger.LogError(ex, "Error checking database status");
-        return Results.Problem(ex.Message);
-    }
-});
 
 app.Run();

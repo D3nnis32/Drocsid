@@ -11,7 +11,6 @@ CREATE TABLE IF NOT EXISTS "Nodes" (
     "Id" text NOT NULL,
     "Hostname" text NOT NULL,
     "Endpoint" text NOT NULL,
-    "ApiKey" text NULL,
     "TotalStorage" bigint NOT NULL,
     "Region" text NULL,
     "LastSeen" timestamp with time zone NOT NULL,
