@@ -8,4 +8,5 @@ public interface IMessageService
     Task<IEnumerable<Message>> GetChannelMessagesAsync(Guid channelId, int skip = 0, int take = 50);
     Task<Message> CreateMessageAsync(Message message);
     Task DeleteMessageAsync(Guid messageId);
+    Task<Message> SyncMessageAsync(Message message);
 }

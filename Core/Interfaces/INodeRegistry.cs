@@ -3,63 +3,94 @@ using Drocsid.HenrikDennis2025.Core.Models;
 namespace Drocsid.HenrikDennis2025.Core.Interfaces;
 
 /// <summary>
-    /// Interface for managing node registry operations
+    /// Interface for node registry operations
     /// </summary>
     public interface INodeRegistry
     {
         /// <summary>
-        /// Registers a new node in the system
+        /// Registers a new node in the registry
         /// </summary>
-        /// <param name="node">Information about the node being registered</param>
-        /// <returns>The assigned node ID</returns>
-        Task<string> RegisterNodeAsync(Node node);
-        
+        /// <param name="node">The node to register</param>
+        /// <returns>True if successful, false otherwise</returns>
+        Task<bool> RegisterNodeAsync(StorageNode node);
+
         /// <summary>
-        /// Updates the status of a node
+        /// Updates an existing node in the registry
         /// </summary>
-        /// <param name="nodeId">The ID of the node</param>
-        /// <param name="status">The new status information</param>
-        Task UpdateNodeStatusAsync(string nodeId, NodeStatus status);
-        
+        /// <param name="node">The node with updated information</param>
+        /// <returns>True if successful, false otherwise</returns>
+        Task<bool> UpdateNodeAsync(StorageNode node);
+
         /// <summary>
-        /// Gets information about a specific node
+        /// Gets a node by its ID
         /// </summary>
-        /// <param name="nodeId">The ID of the node</param>
-        Task<Node?> GetNodeAsync(string nodeId);
-        
+        /// <param name="nodeId">The ID of the node to retrieve</param>
+        /// <returns>The node if found, null otherwise</returns>
+        Task<StorageNode> GetNodeAsync(string nodeId);
+
         /// <summary>
-        /// Gets information about multiple nodes by their IDs
+        /// Gets all nodes in the registry
         /// </summary>
-        /// <param name="nodeIds">The IDs of the nodes</param>
-        Task<List<Node>> GetNodesByIdsAsync(List<string> nodeIds);
-        
+        /// <param name="includeOffline">Whether to include offline/unhealthy nodes</param>
+        /// <returns>A list of all nodes</returns>
+        Task<IEnumerable<StorageNode>> GetAllNodesAsync(bool includeOffline = false);
+
         /// <summary>
-        /// Gets all registered nodes in the system
+        /// Marks a node as unhealthy
         /// </summary>
-        Task<List<Node>> GetAllNodesAsync();
-        
-        /// <summary>
-        /// Gets nodes that are currently healthy and available
-        /// </summary>
-        /// <param name="limit">Optional limit on the number of nodes to return</param>
-        Task<List<Node>> GetAvailableNodesAsync(int? limit = null);
-        
-        /// <summary>
-        /// Selects nodes for storing new data, prioritizing nodes with more available space
-        /// </summary>
-        /// <param name="count">The number of nodes to select</param>
-        /// <param name="preferredRegion">Optional preferred region for the nodes</param>
-        Task<List<Node>> SelectNodesForStorageAsync(int count, string? preferredRegion = null);
-        
-        /// <summary>
-        /// Marks a node as offline or unhealthy
-        /// </summary>
-        /// <param name="nodeId">The ID of the node</param>
-        Task MarkNodeOfflineAsync(string nodeId);
-        
+        /// <param name="nodeId">The ID of the node to mark unhealthy</param>
+        /// <returns>True if successful, false otherwise</returns>
+        Task<bool> MarkNodeUnhealthyAsync(string nodeId);
+
         /// <summary>
         /// Removes a node from the registry
         /// </summary>
-        /// <param name="nodeId">The ID of the node</param>
-        Task RemoveNodeAsync(string nodeId);
+        /// <param name="nodeId">The ID of the node to remove</param>
+        /// <returns>True if successful, false otherwise</returns>
+        Task<bool> RemoveNodeAsync(string nodeId);
+        
+        /// <summary>
+        /// Finds nodes that match certain criteria
+        /// </summary>
+        /// <param name="region">Optional region filter</param>
+        /// <param name="tags">Optional tags to filter on</param>
+        /// <param name="minAvailableStorage">Minimum available storage</param>
+        /// <param name="healthyOnly">Whether to only include healthy nodes</param>
+        /// <returns>A list of nodes matching the criteria</returns>
+        Task<IEnumerable<StorageNode>> FindNodesAsync(
+            string region = null, 
+            IEnumerable<string> tags = null, 
+            long minAvailableStorage = 0,
+            bool healthyOnly = true);
+            
+        /// <summary>
+        /// Gets nodes with the most available storage space
+        /// </summary>
+        /// <param name="count">Maximum number of nodes to return</param>
+        /// <param name="region">Optional region filter</param>
+        /// <returns>List of nodes with the most available storage</returns>
+        Task<IEnumerable<StorageNode>> GetNodesWithMostStorageAsync(int count, string region = null);
+        
+        /// <summary>
+        /// Gets nodes with the lowest load
+        /// </summary>
+        /// <param name="count">Maximum number of nodes to return</param>
+        /// <param name="region">Optional region filter</param>
+        /// <returns>List of nodes with the lowest load</returns>
+        Task<IEnumerable<StorageNode>> GetNodesWithLowestLoadAsync(int count, string region = null);
+        
+        /// <summary>
+        /// Gets nodes by their IDs
+        /// </summary>
+        /// <param name="nodeIds">List of node IDs to retrieve</param>
+        /// <returns>List of nodes matching the provided IDs</returns>
+        Task<IEnumerable<NodeInfo>> GetNodesByIdsAsync(List<string> nodeIds);
+        
+        /// <summary>
+        /// Gets nodes available for file storage (healthy and with sufficient space)
+        /// </summary>
+        /// <param name="minAvailableSpace">Minimum space required</param>
+        /// <param name="region">Optional region filter</param>
+        /// <returns>List of available nodes</returns>
+        Task<IEnumerable<NodeInfo>> GetAvailableNodesAsync(long minAvailableSpace = 0, string region = null);
     }

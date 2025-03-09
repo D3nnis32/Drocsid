@@ -5,77 +5,147 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Drocsid.HenrikDennis2025.RegistryService.Services;
 
-/// <summary>
-    /// Entity Framework implementation of the file registry
-    /// </summary>
-    public class FileRegistry : IFileRegistry
+public class FileRegistry : IFileRegistry
     {
         private readonly RegistryDbContext _dbContext;
         private readonly ILogger<FileRegistry> _logger;
-        private readonly DbContextOptions<RegistryDbContext>? _dbContextOptions;
+        private readonly DbContextOptions<RegistryDbContext> _options;
 
-        // Constructor for regular scoped service
+        // Constructor for scoped service (normal usage)
         public FileRegistry(RegistryDbContext dbContext, ILogger<FileRegistry> logger)
         {
-            _dbContext = dbContext;
-            _logger = logger;
-            _dbContextOptions = null;
+            _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _options = null;
         }
 
-        // Constructor for singleton background service
-        public FileRegistry(DbContextOptions<RegistryDbContext> dbContextOptions, ILogger<FileRegistry> logger)
+        // Constructor for singleton service (health monitor)
+        public FileRegistry(DbContextOptions<RegistryDbContext> options, ILogger<FileRegistry> logger)
         {
-            _dbContext = null!; // Not used in this constructor
-            _logger = logger;
-            _dbContextOptions = dbContextOptions;
+            _options = options ?? throw new ArgumentNullException(nameof(options));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _dbContext = null;
         }
 
-        // Helper to get the appropriate DbContext
-        private RegistryDbContext GetContext()
+        private (RegistryDbContext context, bool ownsContext) GetContext()
         {
-            // If we have a direct DbContext from DI, use it
             if (_dbContext != null)
-                return _dbContext;
-            
-            // Otherwise, create a new one from options
-            if (_dbContextOptions != null)
-                return new RegistryDbContext(_dbContextOptions);
-            
-            throw new InvalidOperationException("No valid DbContext available");
+            {
+                return (_dbContext, false); // DI-provided context, don't dispose
+            }
+            else if (_options != null)
+            {
+                return (new RegistryDbContext(_options), true); // We created this, do dispose
+            }
+    
+            throw new InvalidOperationException("No valid database context available");
         }
 
-        public async Task RegisterFileAsync(FileStorage fileStorage)
+        public async Task<bool> RegisterFileAsync(StoredFile file)
         {
             try
             {
-                var context = GetContext();
-                var shouldDispose = _dbContext == null;
+                var (context, ownsContext) = GetContext();
+                var existingFile = await context.Files.FirstOrDefaultAsync(f => f.Id == file.Id);
+
+                if (existingFile != null)
+                {
+                    _logger.LogWarning("Attempted to register file with existing ID: {FileId}", file.Id);
+                    return false;
+                }
+
+                // Ensure file has a valid ID
+                if (string.IsNullOrEmpty(file.Id))
+                {
+                    file.Id = Guid.NewGuid().ToString();
+                }
+
+                file.CreatedAt = DateTime.UtcNow;
+                file.ModifiedAt = DateTime.UtcNow;
                 
+                await context.Files.AddAsync(file);
+                await context.SaveChangesAsync();
+                
+                _logger.LogInformation("File registered: {FileId}, Name: {Filename}", file.Id, file.Filename);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error registering file: {FileId}", file.Id);
+                return false;
+            }
+        }
+
+        // New method to handle FileStorage registrations from API
+        public async Task<bool> RegisterFileStorageAsync(FileStorage fileStorage)
+        {
+            try
+            {
+                // Convert FileStorage to StoredFile
+                var storedFile = new StoredFile
+                {
+                    Id = fileStorage.FileId,
+                    Filename = fileStorage.FileName,
+                    ContentType = fileStorage.ContentType,
+                    Size = fileStorage.Size,
+                    Checksum = fileStorage.Checksum,
+                    NodeLocations = fileStorage.NodeIds,
+                    Metadata = fileStorage.Metadata,
+                    CreatedAt = DateTime.UtcNow,
+                    ModifiedAt = DateTime.UtcNow,
+                    OwnerId = "system" // Default owner, should be replaced with actual user ID in real implementation
+                };
+                
+                return await RegisterFileAsync(storedFile);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error registering file from storage: {FileId}", fileStorage.FileId);
+                return false;
+            }
+        }
+
+        public async Task<bool> UpdateFileAsync(StoredFile file)
+        {
+            try
+            {
+                var (context, ownsContext) = GetContext();
+                var existingFile = await context.Files.FirstOrDefaultAsync(f => f.Id == file.Id);
+
+                if (existingFile == null)
+                {
+                    _logger.LogWarning("Attempted to update non-existent file: {FileId}", file.Id);
+                    return false;
+                }
+
+                // Update the file properties
+                context.Entry(existingFile).CurrentValues.SetValues(file);
+                existingFile.ModifiedAt = DateTime.UtcNow;
+                
+                await context.SaveChangesAsync();
+                
+                _logger.LogInformation("File updated: {FileId}", file.Id);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating file: {FileId}", file.Id);
+                return false;
+            }
+        }
+
+        public async Task<StoredFile> GetFileAsync(string fileId)
+        {
+            try
+            {
+                var (context, ownsContext) = GetContext();
                 try
                 {
-                    // Check if file already exists
-                    var existingFile = await context.Files.FindAsync(fileStorage.FileId);
-                    if (existingFile != null)
-                    {
-                        _logger.LogWarning("Attempting to register existing file {FileId}", fileStorage.FileId);
-                        return;
-                    }
-
-                    // Set creation time if not already set
-                    if (fileStorage.CreatedAt == default)
-                    {
-                        fileStorage.CreatedAt = DateTime.UtcNow;
-                    }
-
-                    await context.Files.AddAsync(fileStorage);
-                    await context.SaveChangesAsync();
-                    
-                    _logger.LogInformation("Registered file {FileId} on {NodeCount} nodes", 
-                        fileStorage.FileId, fileStorage.NodeIds.Count);
+                    return await context.Files.FirstOrDefaultAsync(f => f.Id == fileId);
                 }
                 finally
                 {
-                    if (shouldDispose)
+                    if (ownsContext)
                     {
                         await context.DisposeAsync();
                     }
@@ -83,201 +153,190 @@ namespace Drocsid.HenrikDennis2025.RegistryService.Services;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error registering file {FileId}", fileStorage.FileId);
-                throw;
+                _logger.LogError(ex, "Error retrieving file: {FileId}", fileId);
+                return null;
             }
         }
 
-        public async Task<FileStorage?> GetFileInfoAsync(string fileId)
+        public async Task<IEnumerable<StoredFile>> FindFilesByNameAsync(string filename)
         {
-            var context = GetContext();
-            var shouldDispose = _dbContext == null;
-            
             try
             {
-                return await context.Files.FindAsync(fileId);
-            }
-            finally
-            {
-                if (shouldDispose)
-                {
-                    await context.DisposeAsync();
-                }
-            }
-        }
-
-        public async Task UpdateFileLocationsAsync(string fileId, List<string> nodeIds)
-        {
-            var context = GetContext();
-            var shouldDispose = _dbContext == null;
-            
-            try
-            {
-                var file = await context.Files.FindAsync(fileId);
-                if (file == null)
-                {
-                    _logger.LogWarning("Attempting to update locations for non-existent file {FileId}", fileId);
-                    return;
-                }
-
-                file.NodeIds = nodeIds;
-                file.LastAccessed = DateTime.UtcNow;
-                await context.SaveChangesAsync();
-                
-                _logger.LogInformation("Updated file {FileId} locations to {NodeIds}", 
-                    fileId, string.Join(", ", nodeIds));
-            }
-            finally
-            {
-                if (shouldDispose)
-                {
-                    await context.DisposeAsync();
-                }
-            }
-        }
-
-        public async Task AddFileLocationAsync(string fileId, string nodeId)
-        {
-            var context = GetContext();
-            var shouldDispose = _dbContext == null;
-            
-            try
-            {
-                var file = await context.Files.FindAsync(fileId);
-                if (file == null)
-                {
-                    _logger.LogWarning("Attempting to add location for non-existent file {FileId}", fileId);
-                    return;
-                }
-
-                if (!file.NodeIds.Contains(nodeId))
-                {
-                    file.NodeIds.Add(nodeId);
-                    await context.SaveChangesAsync();
-                    
-                    _logger.LogInformation("Added node {NodeId} to file {FileId} locations", nodeId, fileId);
-                }
-            }
-            finally
-            {
-                if (shouldDispose)
-                {
-                    await context.DisposeAsync();
-                }
-            }
-        }
-
-        public async Task RemoveFileLocationAsync(string fileId, string nodeId)
-        {
-            var context = GetContext();
-            var shouldDispose = _dbContext == null;
-            
-            try
-            {
-                var file = await context.Files.FindAsync(fileId);
-                if (file == null)
-                {
-                    _logger.LogWarning("Attempting to remove location for non-existent file {FileId}", fileId);
-                    return;
-                }
-
-                if (file.NodeIds.Contains(nodeId))
-                {
-                    file.NodeIds.Remove(nodeId);
-                    await context.SaveChangesAsync();
-                    
-                    _logger.LogInformation("Removed node {NodeId} from file {FileId} locations", nodeId, fileId);
-                }
-            }
-            finally
-            {
-                if (shouldDispose)
-                {
-                    await context.DisposeAsync();
-                }
-            }
-        }
-
-        public async Task<List<FileStorage>> GetFilesByNodeAsync(string nodeId)
-        {
-            var context = GetContext();
-            var shouldDispose = _dbContext == null;
-            
-            try
-            {
+                var (context, ownsContext) = GetContext();
                 return await context.Files
-                    .Where(f => f.NodeIds.Contains(nodeId))
+                    .Where(f => f.Filename.Contains(filename))
                     .ToListAsync();
             }
-            finally
+            catch (Exception ex)
             {
-                if (shouldDispose)
-                {
-                    await context.DisposeAsync();
-                }
+                _logger.LogError(ex, "Error finding files by name: {Filename}", filename);
+                return Enumerable.Empty<StoredFile>();
             }
         }
 
-        public async Task DeleteFileAsync(string fileId)
+        public async Task<IEnumerable<StoredFile>> GetFilesByNodeAsync(string nodeId)
         {
-            var context = GetContext();
-            var shouldDispose = _dbContext == null;
+            try
+            {
+                var (context, ownsContext) = GetContext();
+                // Load all files first, then filter in memory
+                var allFiles = await context.Files.ToListAsync();
+                return allFiles.Where(f => f.NodeLocations.Contains(nodeId)).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving files for node: {NodeId}", nodeId);
+                return Enumerable.Empty<StoredFile>();
+            }
+        }
+
+        public async Task<bool> AddFileLocationAsync(string fileId, string nodeId)
+        {
+            try
+            {
+                var (context, ownsContext) = GetContext();
+                var file = await context.Files.FirstOrDefaultAsync(f => f.Id == fileId);
+
+                if (file == null)
+                {
+                    _logger.LogWarning("Attempted to add location for non-existent file: {FileId}", fileId);
+                    return false;
+                }
+
+                // This check is now in-memory, not in SQL
+                if (!file.NodeLocations.Contains(nodeId))
+                {
+                    file.NodeLocations.Add(nodeId);
+                    file.ModifiedAt = DateTime.UtcNow;
+                    await context.SaveChangesAsync();
             
+                    _logger.LogInformation("Added node location {NodeId} for file {FileId}", nodeId, fileId);
+                }
+        
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding file location: File {FileId}, Node {NodeId}", fileId, nodeId);
+                return false;
+            }
+        }
+
+        public async Task<bool> RemoveFileLocationAsync(string fileId, string nodeId)
+        {
+            try
+            {
+                var (context, ownsContext) = GetContext();
+                var file = await context.Files.FirstOrDefaultAsync(f => f.Id == fileId);
+
+                if (file == null)
+                {
+                    _logger.LogWarning("Attempted to remove location for non-existent file: {FileId}", fileId);
+                    return false;
+                }
+
+                // This check is now in-memory, not in SQL
+                if (file.NodeLocations.Contains(nodeId))
+                {
+                    file.NodeLocations.Remove(nodeId);
+                    file.ModifiedAt = DateTime.UtcNow;
+                    await context.SaveChangesAsync();
+            
+                    _logger.LogInformation("Removed node location {NodeId} for file {FileId}", nodeId, fileId);
+                }
+        
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error removing file location: File {FileId}, Node {NodeId}", fileId, nodeId);
+                return false;
+            }
+        }
+
+        public async Task<bool> DeleteFileAsync(string fileId)
+        {
+            try
+            {
+                var (context, ownsContext) = GetContext();
+                var file = await context.Files.FirstOrDefaultAsync(f => f.Id == fileId);
+
+                if (file == null)
+                {
+                    _logger.LogWarning("Attempted to delete non-existent file: {FileId}", fileId);
+                    return false;
+                }
+
+                context.Files.Remove(file);
+                await context.SaveChangesAsync();
+                
+                _logger.LogInformation("File deleted: {FileId}", fileId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting file: {FileId}", fileId);
+                return false;
+            }
+        }
+        
+        public async Task<IEnumerable<StoredFile>> GetAllFilesAsync()
+        {
+            try
+            {
+                var (context, ownsContext) = GetContext();
+                return await context.Files.ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving all files");
+                return Enumerable.Empty<StoredFile>();
+            }
+        }
+
+        public async Task<FileStorage> GetFileInfoAsync(string fileId)
+        {
+            try
+            {
+                var (context, ownsContext) = GetContext();
+                var file = await context.Files.FirstOrDefaultAsync(f => f.Id == fileId);
+        
+                if (file == null)
+                {
+                    return null;
+                }
+        
+                return new FileStorage
+                {
+                    FileId = file.Id,
+                    FileName = file.Filename,
+                    ContentType = file.ContentType,
+                    Size = file.Size,
+                    NodeIds = file.NodeLocations,
+                    Checksum = file.Checksum,
+                    Metadata = file.Metadata
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving file info: {FileId}", fileId);
+                return null;
+            }
+        }
+        
+        public async Task UpdateFileAccessTimeAsync(string fileId)
+        {
+            var (context, ownsContext) = GetContext();
+            var shouldDispose = _dbContext == null;
+    
             try
             {
                 var file = await context.Files.FindAsync(fileId);
                 if (file != null)
                 {
-                    context.Files.Remove(file);
+                    file.LastAccessed = DateTime.UtcNow;
                     await context.SaveChangesAsync();
-                    
-                    _logger.LogInformation("Deleted file {FileId} from registry", fileId);
                 }
-            }
-            finally
-            {
-                if (shouldDispose)
-                {
-                    await context.DisposeAsync();
-                }
-            }
-        }
-
-        public async Task<bool> CheckReplicationFactorAsync(string fileId, int minReplicationFactor)
-        {
-            var context = GetContext();
-            var shouldDispose = _dbContext == null;
-            
-            try
-            {
-                var file = await context.Files.FindAsync(fileId);
-                if (file == null)
-                {
-                    return false;
-                }
-
-                return file.NodeIds.Count >= minReplicationFactor;
-            }
-            finally
-            {
-                if (shouldDispose)
-                {
-                    await context.DisposeAsync();
-                }
-            }
-        }
-
-        public async Task<List<FileStorage>> GetFilesNeedingReplicationAsync(int minReplicationFactor)
-        {
-            var context = GetContext();
-            var shouldDispose = _dbContext == null;
-            
-            try
-            {
-                // Get all files first, then filter in memory
-                // This avoids the PostgreSQL cardinality issue
-                var allFiles = await context.Files.ToListAsync();
-                return allFiles.Where(f => f.NodeIds.Count < minReplicationFactor).ToList();
             }
             finally
             {

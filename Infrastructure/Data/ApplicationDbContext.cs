@@ -1,5 +1,7 @@
+using System.Text.Json;
 using Drocsid.HenrikDennis2025.Core.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Infrastructure.Data;
 
@@ -35,9 +37,15 @@ public class ApplicationDbContext : DbContext
             .HasKey(c => c.Id);
             
         modelBuilder.Entity<Channel>()
-            .Property(c => c.Name)
-            .IsRequired()
-            .HasMaxLength(100);
+            .Property(e => e.MemberIds)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, new JsonSerializerOptions()),
+                v => JsonSerializer.Deserialize<List<Guid>>(v, new JsonSerializerOptions()) ?? new List<Guid>()
+            )
+            .Metadata.SetValueComparer(new ValueComparer<List<Guid>>(
+                (c1, c2) => c1.SequenceEqual(c2),
+                c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                c => c.ToList()));
             
         // Message configurations
         modelBuilder.Entity<Message>()
@@ -52,7 +60,7 @@ public class ApplicationDbContext : DbContext
             .HasKey(a => a.Id);
             
         modelBuilder.Entity<Attachment>()
-            .Property(a => a.FileName)
+            .Property(a => a.Filename)
             .IsRequired()
             .HasMaxLength(255);
             

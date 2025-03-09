@@ -3,65 +3,86 @@ using Drocsid.HenrikDennis2025.Core.Models;
 namespace Drocsid.HenrikDennis2025.Core.Interfaces;
 
 /// <summary>
-    /// Interface for managing file registry operations
+    /// Interface for file registry operations
     /// </summary>
     public interface IFileRegistry
     {
         /// <summary>
-        /// Registers a file and its storage locations
+        /// Registers a new file in the system
         /// </summary>
-        /// <param name="fileStorage">Information about the file being registered</param>
-        Task RegisterFileAsync(FileStorage fileStorage);
+        /// <param name="file">The file to register</param>
+        /// <returns>True if successful, false otherwise</returns>
+        Task<bool> RegisterFileAsync(StoredFile file);
         
         /// <summary>
-        /// Gets information about a file including its storage locations
+        /// Registers a new file from FileStorage DTO
         /// </summary>
-        /// <param name="fileId">The unique identifier of the file</param>
-        Task<FileStorage?> GetFileInfoAsync(string fileId);
-        
+        /// <param name="fileStorage">The FileStorage DTO to register</param>
+        /// <returns>True if successful, false otherwise</returns>
+        Task<bool> RegisterFileStorageAsync(FileStorage fileStorage);
+
         /// <summary>
-        /// Updates the storage locations for a file
+        /// Updates an existing file's metadata
         /// </summary>
-        /// <param name="fileId">The unique identifier of the file</param>
-        /// <param name="nodeIds">The IDs of nodes where the file is stored</param>
-        Task UpdateFileLocationsAsync(string fileId, List<string> nodeIds);
-        
+        /// <param name="file">The file with updated information</param>
+        /// <returns>True if successful, false otherwise</returns>
+        Task<bool> UpdateFileAsync(StoredFile file);
+
         /// <summary>
-        /// Adds a new storage location for a file
+        /// Gets a file by its ID
         /// </summary>
-        /// <param name="fileId">The unique identifier of the file</param>
-        /// <param name="nodeId">The ID of the node where the file is newly stored</param>
-        Task AddFileLocationAsync(string fileId, string nodeId);
-        
+        /// <param name="fileId">The ID of the file to retrieve</param>
+        /// <returns>The file if found, null otherwise</returns>
+        Task<StoredFile> GetFileAsync(string fileId);
+
         /// <summary>
-        /// Removes a storage location for a file
+        /// Gets files by filename or partial match
         /// </summary>
-        /// <param name="fileId">The unique identifier of the file</param>
-        /// <param name="nodeId">The ID of the node from which the file is removed</param>
-        Task RemoveFileLocationAsync(string fileId, string nodeId);
-        
+        /// <param name="filename">The filename or pattern to search for</param>
+        /// <returns>A list of matching files</returns>
+        Task<IEnumerable<StoredFile>> FindFilesByNameAsync(string filename);
+
         /// <summary>
-        /// Gets all files stored on a specific node
+        /// Gets files stored on a specific node
         /// </summary>
         /// <param name="nodeId">The ID of the node</param>
-        Task<List<FileStorage>> GetFilesByNodeAsync(string nodeId);
+        /// <returns>A list of files stored on the node</returns>
+        Task<IEnumerable<StoredFile>> GetFilesByNodeAsync(string nodeId);
+
+        /// <summary>
+        /// Adds a file location (node where the file is stored)
+        /// </summary>
+        /// <param name="fileId">The ID of the file</param>
+        /// <param name="nodeId">The ID of the node</param>
+        /// <returns>True if successful, false otherwise</returns>
+        Task<bool> AddFileLocationAsync(string fileId, string nodeId);
+
+        /// <summary>
+        /// Removes a file location (when a file is removed from a node)
+        /// </summary>
+        /// <param name="fileId">The ID of the file</param>
+        /// <param name="nodeId">The ID of the node</param>
+        /// <returns>True if successful, false otherwise</returns>
+        Task<bool> RemoveFileLocationAsync(string fileId, string nodeId);
+
+        /// <summary>
+        /// Deletes a file from the system (all copies)
+        /// </summary>
+        /// <param name="fileId">The ID of the file to delete</param>
+        /// <returns>True if successful, false otherwise</returns>
+        Task<bool> DeleteFileAsync(string fileId);
         
         /// <summary>
-        /// Removes a file from the registry entirely
+        /// Gets all files in the system
         /// </summary>
-        /// <param name="fileId">The unique identifier of the file</param>
-        Task DeleteFileAsync(string fileId);
+        /// <returns>All files in the system</returns>
+        Task<IEnumerable<StoredFile>> GetAllFilesAsync();
         
         /// <summary>
-        /// Checks if a file's replication factor meets the minimum requirement
+        /// Gets file information for UI display or operations
         /// </summary>
-        /// <param name="fileId">The unique identifier of the file</param>
-        /// <param name="minReplicationFactor">The minimum number of copies required</param>
-        Task<bool> CheckReplicationFactorAsync(string fileId, int minReplicationFactor);
-        
-        /// <summary>
-        /// Gets files that need additional replication to meet the minimum factor
-        /// </summary>
-        /// <param name="minReplicationFactor">The minimum number of copies required</param>
-        Task<List<FileStorage>> GetFilesNeedingReplicationAsync(int minReplicationFactor);
+        /// <param name="fileId">The ID of the file</param>
+        /// <returns>File information or null if not found</returns>
+        Task<FileStorage> GetFileInfoAsync(string fileId);
+        Task UpdateFileAccessTimeAsync(string fileId);
     }

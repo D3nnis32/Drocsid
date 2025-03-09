@@ -1,0 +1,152 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: drocsid-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - drocsid-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  registry-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.registry
+    container_name: drocsid-registry
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__RegistryConnection=Host=postgres;Database=drocsid_registry;Username=postgres;Password=123
+      - ASPNETCORE_URLS=http://+:5261
+    ports:
+      - "5261:5261"
+    volumes:
+      - ./registry-appsettings.json:/app/appsettings.json
+    # Add a script to wait for database schema to be ready
+    entrypoint: [
+      "sh", 
+      "-c", 
+      "echo 'Waiting for database schema...' && sleep 5 && ls -la /app && dotnet --info && dotnet RegistryService.dll"
+    ]
+    networks:
+      - drocsid-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5261/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  api-node-1:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: drocsid-api-1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      registry-service:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=drocsid;Username=postgres;Password=123
+      - NodeRegistration__NodeId=node1
+      - NodeRegistration__NodeRegion=region1
+      - NodeRegistration__RegistryUrl=http://registry-service:5261
+      - NodeRegistration__NodeEndpoint=http://drocsid-api-1:5186
+      - NodeRegistration__DataDirectory=/app/FileStorage
+      - NodeRegistration__HeartbeatInterval=00:00:30
+      - NodeRegistration__NodeTags__0=storage
+      - NodeRegistration__NodeTags__1=main
+      - ASPNETCORE_URLS=http://+:5186
+    ports:
+      - "5186:5186"
+    volumes:
+      - ./node1-appsettings.json:/app/appsettings.json
+      - api-node1-storage:/app/FileStorage
+    networks:
+      - drocsid-network
+
+  api-node-2:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: drocsid-api-2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      registry-service:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=drocsid;Username=postgres;Password=123
+      - NodeRegistration__NodeId=node2
+      - NodeRegistration__NodeRegion=region2
+      - NodeRegistration__RegistryUrl=http://registry-service:5261
+      - NodeRegistration__NodeEndpoint=http://drocsid-api-2:5186
+      - NodeRegistration__DataDirectory=/app/FileStorage
+      - NodeRegistration__HeartbeatInterval=00:00:30
+      - NodeRegistration__NodeTags__0=storage
+      - NodeRegistration__NodeTags__1=backup
+      - ASPNETCORE_URLS=http://+:5186
+    ports:
+      - "5187:5186"
+    volumes:
+      - ./node2-appsettings.json:/app/appsettings.json
+      - api-node2-storage:/app/FileStorage
+    networks:
+      - drocsid-network
+
+  api-node-3:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: drocsid-api-3
+    depends_on:
+      postgres:
+        condition: service_healthy
+      registry-service:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=drocsid;Username=postgres;Password=123
+      - NodeRegistration__NodeId=node3
+      - NodeRegistration__NodeRegion=region3
+      - NodeRegistration__RegistryUrl=http://registry-service:5261
+      - NodeRegistration__NodeEndpoint=http://drocsid-api-3:5186
+      - NodeRegistration__DataDirectory=/app/FileStorage
+      - NodeRegistration__HeartbeatInterval=00:00:30
+      - NodeRegistration__NodeTags__0=storage
+      - NodeRegistration__NodeTags__1=archive
+      - ASPNETCORE_URLS=http://+:5186
+    ports:
+      - "5188:5186"
+    volumes:
+      - ./node3-appsettings.json:/app/appsettings.json
+      - api-node3-storage:/app/FileStorage
+    networks:
+      - drocsid-network
+
+networks:
+  drocsid-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  api-node1-storage:
+  api-node2-storage:
+  api-node3-storage:
