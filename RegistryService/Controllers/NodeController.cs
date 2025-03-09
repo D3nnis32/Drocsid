@@ -1,6 +1,7 @@
 using Drocsid.HenrikDennis2025.Core.DTO;
 using Drocsid.HenrikDennis2025.Core.Interfaces;
 using Drocsid.HenrikDennis2025.Core.Models;
+using Drocsid.HenrikDennis2025.RegistryService.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Drocsid.HenrikDennis2025.RegistryService.Controllers;
@@ -27,10 +28,9 @@ namespace Drocsid.HenrikDennis2025.RegistryService.Controllers;
         public async Task<IActionResult> RegisterNode([FromBody] NodeRegistrationRequest request)
         {
             _logger.LogInformation("Received node registration request: {@Request}", request);
-            
+    
             if (!ModelState.IsValid)
             {
-                _logger.LogError("Wrong Model");
                 return BadRequest(ModelState);
             }
 
@@ -39,27 +39,17 @@ namespace Drocsid.HenrikDennis2025.RegistryService.Controllers;
                 _logger.LogInformation("Registering node with hostname: {Hostname}, endpoint: {Endpoint}", 
                     request.Hostname, request.Endpoint);
 
-                var node = new StorageNode
-                {
-                    Id = string.IsNullOrEmpty(request.Id) ? Guid.NewGuid().ToString() : request.Id,
-                    Hostname = request.Hostname,
-                    Endpoint = request.Endpoint,
-                    Status = new NodeStatus
-                    {
-                        IsHealthy = true,
-                        CurrentLoad = 0,
-                        AvailableSpace = request.AvailableStorage,
-                        ActiveConnections = 0,
-                        LastUpdated = DateTime.UtcNow
-                    },
-                    TotalStorage = request.TotalStorage,
-                    Region = request.Region,
-                    LastSeen = DateTime.UtcNow,
-                    Tags = request.Tags
-                };
+                // Use the helper to create a properly initialized node
+                var node = NodeRegistryInitialization.InitializeNode(
+                    id: string.IsNullOrEmpty(request.Id) ? Guid.NewGuid().ToString() : request.Id,
+                    hostname: request.Hostname,
+                    endpoint: request.Endpoint,
+                    region: request.Region,
+                    totalStorage: request.TotalStorage
+                );
 
                 bool success = await _nodeRegistry.RegisterNodeAsync(node);
-                
+        
                 if (!success)
                 {
                     return BadRequest("Failed to register node");

@@ -2,6 +2,8 @@ using Drocsid.HenrikDennis2025.Core.DTO;
 using Drocsid.HenrikDennis2025.Core.Interfaces.Options;
 using Drocsid.HenrikDennis2025.Core.Models;
 using Microsoft.Extensions.Options;
+using System.Net;
+using System.Net.Sockets;
 
 namespace Drocsid.HenrikDennis2025.Api.Services;
 
@@ -73,8 +75,8 @@ public class NodeRegistrationClient : BackgroundService
 
         try
         {
-            // Register with the registry
-            await RegisterNodeAsync(stoppingToken);
+            // Register with the registry with retry
+            await RegisterNodeWithRetryAsync(stoppingToken);
             
             // Start sending heartbeats
             using var timer = new PeriodicTimer(_options.HeartbeatInterval);
@@ -92,6 +94,52 @@ public class NodeRegistrationClient : BackgroundService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error in node registration service");
+        }
+    }
+
+    /// <summary>
+    /// Register this node with the registry service with retry
+    /// </summary>
+    private async Task RegisterNodeWithRetryAsync(CancellationToken cancellationToken)
+    {
+        const int maxRetries = 10;
+        int retryCount = 0;
+        TimeSpan delay = TimeSpan.FromSeconds(5);
+        
+        while (!cancellationToken.IsCancellationRequested && retryCount < maxRetries)
+        {
+            try
+            {
+                await RegisterNodeAsync(cancellationToken);
+                // If we get here, registration was successful
+                _logger.LogInformation("Successfully registered node after {RetryCount} retries", retryCount);
+                return;
+            }
+            catch (HttpRequestException ex) when (ex.InnerException is SocketException 
+                || (ex.StatusCode.HasValue && (int)ex.StatusCode.Value >= 500))
+            {
+                // Handle connection and server errors with retry
+                retryCount++;
+                
+                if (retryCount >= maxRetries)
+                {
+                    _logger.LogError(ex, "Failed to register after {MaxRetries} attempts", maxRetries);
+                    throw;
+                }
+                
+                _logger.LogWarning(ex, "Error connecting to registry, retrying in {Delay}... (Attempt {RetryCount}/{MaxRetries})", 
+                    delay, retryCount, maxRetries);
+                
+                // Exponential backoff with jitter
+                await Task.Delay(delay + TimeSpan.FromMilliseconds(new Random().Next(0, 1000)), cancellationToken);
+                delay = TimeSpan.FromSeconds(Math.Min(60, Math.Pow(2, retryCount)));
+            }
+            catch (Exception ex)
+            {
+                // For other exceptions, don't retry
+                _logger.LogError(ex, "Unexpected error during node registration");
+                throw;
+            }
         }
     }
 
@@ -142,7 +190,9 @@ public class NodeRegistrationClient : BackgroundService
             }
             else
             {
-                _logger.LogError("Failed to register node. Status code: {StatusCode}", response.StatusCode);
+                var content = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogError("Failed to register node. Status code: {StatusCode}, Content: {Content}", 
+                    response.StatusCode, content);
                 throw new InvalidOperationException($"Failed to register node. Status code: {response.StatusCode}");
             }
         }
@@ -154,51 +204,80 @@ public class NodeRegistrationClient : BackgroundService
     }
 
     /// <summary>
-    /// Send a heartbeat to the registry service
+    /// Send a heartbeat to the registry service with retry
     /// </summary>
     private async Task SendHeartbeatAsync(CancellationToken cancellationToken)
     {
-        try
+        const int maxRetries = 3;
+        int retryCount = 0;
+        TimeSpan delay = TimeSpan.FromSeconds(2);
+        
+        while (!cancellationToken.IsCancellationRequested && retryCount < maxRetries)
         {
-            _logger.LogDebug("Sending heartbeat to registry");
-            
-            var client = _httpClientFactory.CreateClient();
-            var registryUrl = _options.RegistryUrl.TrimEnd('/');
-            
-            // Create node status
-            var status = new NodeStatus
+            try
             {
-                IsHealthy = true,
-                CurrentLoad = CalculateCurrentLoad(),
-                AvailableSpace = CalculateAvailableStorage(),
-                ActiveConnections = CalculateActiveConnections(),
-                LastUpdated = DateTime.UtcNow
-            };
-            
-            // Create heartbeat request
-            var request = new NodeHeartbeatRequest
-            {
-                Status = status
-            };
-            
-            // Send heartbeat
-            var response = await client.PutAsJsonAsync(
-                $"{registryUrl}/api/nodes/{_nodeId}/heartbeat", 
-                request, 
-                cancellationToken);
-            
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogWarning("Failed to send heartbeat. Status code: {StatusCode}", response.StatusCode);
+                _logger.LogDebug("Sending heartbeat to registry");
                 
-                // If it's been too long since we registered, try to register again
-                // This handles cases where the registry might have restarted or lost our registration
-                await RegisterNodeAsync(cancellationToken);
+                var client = _httpClientFactory.CreateClient();
+                var registryUrl = _options.RegistryUrl.TrimEnd('/');
+                
+                // Create node status
+                var status = new NodeStatus
+                {
+                    IsHealthy = true,
+                    CurrentLoad = CalculateCurrentLoad(),
+                    AvailableSpace = CalculateAvailableStorage(),
+                    ActiveConnections = CalculateActiveConnections(),
+                    LastUpdated = DateTime.UtcNow
+                };
+                
+                // Create heartbeat request
+                var request = new NodeHeartbeatRequest
+                {
+                    Status = status
+                };
+                
+                // Send heartbeat
+                var response = await client.PutAsJsonAsync(
+                    $"{registryUrl}/api/nodes/{_nodeId}/heartbeat", 
+                    request, 
+                    cancellationToken);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    // Heartbeat successful
+                    return;
+                }
+                else if (response.StatusCode == HttpStatusCode.NotFound)
+                {
+                    _logger.LogWarning("Registry does not recognize this node, re-registering...");
+                    // If registry doesn't know this node, try to register again
+                    await RegisterNodeWithRetryAsync(cancellationToken);
+                    return;
+                }
+                else
+                {
+                    retryCount++;
+                    
+                    if (retryCount >= maxRetries)
+                    {
+                        _logger.LogError("Failed to send heartbeat after {MaxRetries} attempts. Status: {StatusCode}", 
+                            maxRetries, response.StatusCode);
+                        return;
+                    }
+                    
+                    _logger.LogWarning("Failed to send heartbeat. Status: {StatusCode}. Retrying in {Delay}... (Attempt {RetryCount}/{MaxRetries})", 
+                        response.StatusCode, delay, retryCount, maxRetries);
+                    
+                    await Task.Delay(delay, cancellationToken);
+                    delay = TimeSpan.FromSeconds(Math.Min(60, Math.Pow(2, retryCount)));
+                }
             }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error sending heartbeat to registry");
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending heartbeat to registry");
+                return;
+            }
         }
     }
 

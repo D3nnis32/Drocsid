@@ -12,7 +12,7 @@ public class Message
     public Guid SenderId { get; set; }
     public string SenderName { get; set; } // Added for UI display
     public string Content { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime SentAt { get; set; } = DateTime.UtcNow;
     public DateTime? EditedAt { get; set; }
     public List<Attachment> Attachments { get; set; } = new List<Attachment>();
     // Adding the missing property

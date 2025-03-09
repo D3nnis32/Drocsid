@@ -12,6 +12,9 @@
 GET {{registryUrl}}/api/gateway/nodes/health
 Accept: application/json
 
+###
+GET {{registryUrl}}/api/nodes
+
 ### 1. User Registration and Authentication Tests
 
 ### Register first test user

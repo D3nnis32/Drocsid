@@ -36,20 +36,9 @@ services:
       - "5261:5261"
     volumes:
       - ./registry-appsettings.json:/app/appsettings.json
-    # Add a script to wait for database schema to be ready
-    entrypoint: [
-      "sh", 
-      "-c", 
-      "echo 'Waiting for database schema...' && sleep 5 && ls -la /app && dotnet --info && dotnet RegistryService.dll"
-    ]
     networks:
       - drocsid-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5261/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
+    restart: on-failure
 
   api-node-1:
     build:
@@ -57,16 +46,14 @@ services:
       dockerfile: Dockerfile.api
     container_name: drocsid-api-1
     depends_on:
-      postgres:
-        condition: service_healthy
       registry-service:
-        condition: service_healthy
+        condition: service_started
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=drocsid;Username=postgres;Password=123
       - NodeRegistration__NodeId=node1
       - NodeRegistration__NodeRegion=region1
-      - NodeRegistration__RegistryUrl=http://registry-service:5261
+      - NodeRegistration__RegistryUrl=http://drocsid-registry:5261
       - NodeRegistration__NodeEndpoint=http://drocsid-api-1:5186
       - NodeRegistration__DataDirectory=/app/FileStorage
       - NodeRegistration__HeartbeatInterval=00:00:30
@@ -80,6 +67,7 @@ services:
       - api-node1-storage:/app/FileStorage
     networks:
       - drocsid-network
+    restart: on-failure
 
   api-node-2:
     build:
@@ -87,16 +75,14 @@ services:
       dockerfile: Dockerfile.api
     container_name: drocsid-api-2
     depends_on:
-      postgres:
-        condition: service_healthy
       registry-service:
-        condition: service_healthy
+        condition: service_started
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=drocsid;Username=postgres;Password=123
       - NodeRegistration__NodeId=node2
       - NodeRegistration__NodeRegion=region2
-      - NodeRegistration__RegistryUrl=http://registry-service:5261
+      - NodeRegistration__RegistryUrl=http://drocsid-registry:5261
       - NodeRegistration__NodeEndpoint=http://drocsid-api-2:5186
       - NodeRegistration__DataDirectory=/app/FileStorage
       - NodeRegistration__HeartbeatInterval=00:00:30
@@ -110,6 +96,7 @@ services:
       - api-node2-storage:/app/FileStorage
     networks:
       - drocsid-network
+    restart: on-failure
 
   api-node-3:
     build:
@@ -117,16 +104,14 @@ services:
       dockerfile: Dockerfile.api
     container_name: drocsid-api-3
     depends_on:
-      postgres:
-        condition: service_healthy
       registry-service:
-        condition: service_healthy
+        condition: service_started
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=drocsid;Username=postgres;Password=123
       - NodeRegistration__NodeId=node3
       - NodeRegistration__NodeRegion=region3
-      - NodeRegistration__RegistryUrl=http://registry-service:5261
+      - NodeRegistration__RegistryUrl=http://drocsid-registry:5261
       - NodeRegistration__NodeEndpoint=http://drocsid-api-3:5186
       - NodeRegistration__DataDirectory=/app/FileStorage
       - NodeRegistration__HeartbeatInterval=00:00:30
@@ -140,6 +125,7 @@ services:
       - api-node3-storage:/app/FileStorage
     networks:
       - drocsid-network
+    restart: on-failure
 
 networks:
   drocsid-network:

@@ -80,7 +80,6 @@ public class DatabaseIntegrationTestService : IHostedService
                         Id = "test-node-1",
                         Hostname = "test-host",
                         Endpoint = "http://test-endpoint:5000",
-                        ApiKey = "test-api-key",
                         Region = "test-region",
                         TotalStorage = 1000000,
                         Status = new NodeStatus

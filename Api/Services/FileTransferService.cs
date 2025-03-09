@@ -200,7 +200,7 @@ public class FileTransferService : IFileTransferService
                     // Step 1: Get file download URL from source node
                     var downloadUrlRequest = new HttpRequestMessage(HttpMethod.Get, 
                         $"{sourceNode.Endpoint}/api/storage/prepare-download/{file.Id}");
-                    var authToken = GenerateAuthToken(sourceNode.ApiKey);
+                    var authToken = GenerateAuthToken(sourceNode.Id); // Use ID instead of ApiKey
                     downloadUrlRequest.Headers.Add("Authorization", $"Bearer {authToken}");
                     
                     var downloadUrlResponse = await httpClient.SendAsync(downloadUrlRequest);
@@ -211,7 +211,7 @@ public class FileTransferService : IFileTransferService
                     // Step 2: Get upload URL from target node
                     var uploadUrlRequest = new HttpRequestMessage(HttpMethod.Post, 
                         $"{targetNode.Endpoint}/api/storage/prepare-upload");
-                    authToken = GenerateAuthToken(targetNode.ApiKey);
+                    authToken = GenerateAuthToken(targetNode.Id); // Use ID instead of ApiKey
                     uploadUrlRequest.Headers.Add("Authorization", $"Bearer {authToken}");
                     
                     var uploadMetadata = new UploadMetadata
@@ -335,10 +335,11 @@ public class FileTransferService : IFileTransferService
         /// Generates a simple auth token for node-to-node communication
         /// In a production system, you would use a more secure method
         /// </summary>
-        private string GenerateAuthToken(string apiKey)
+        private string GenerateAuthToken(string nodeId)
         {
+            // Use node ID instead of API key
             var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            var data = $"{apiKey}:{timestamp}";
+            var data = $"{nodeId}:{timestamp}";
             using var sha256 = SHA256.Create();
             var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(data));
             return Convert.ToBase64String(hashBytes);

@@ -1,7 +1,10 @@
+using System.Text.Json;
 using Drocsid.HenrikDennis2025.Core.Interfaces;
 using Drocsid.HenrikDennis2025.Core.Models;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using NpgsqlTypes;
 
 namespace Drocsid.HenrikDennis2025.RegistryService.Services;
 
@@ -42,90 +45,183 @@ public class NodeRegistry : INodeRegistry
     }
 
     public async Task<bool> RegisterNodeAsync(StorageNode node)
+{
+    try
     {
+        NodeRegistryInitialization.EnsureJsonSerialization(node);
+        
+        var (context, ownsContext) = GetContext();
         try
         {
-            var (context, ownsContext) = GetContext();
-            try
-            {
-                var existingNode = await context.Nodes.FirstOrDefaultAsync(n => n.Id == node.Id);
+            var existingNode = await context.Nodes.FirstOrDefaultAsync(n => n.Id == node.Id);
 
-                if (existingNode != null)
+            if (existingNode != null)
+            {
+                // Update existing node
+                _logger.LogInformation("Updating existing node: {NodeId}", node.Id);
+                
+                // Ensure collections are initialized to prevent serialization issues
+                if (node.Tags == null)
+                    node.Tags = new List<string>();
+                    
+                if (node.Metadata == null)
+                    node.Metadata = new Dictionary<string, string>();
+                
+                context.Entry(existingNode).CurrentValues.SetValues(node);
+                existingNode.LastSeen = DateTime.UtcNow;
+                
+                // Make sure the node is marked as healthy
+                if (existingNode.Status == null)
                 {
-                    // Update existing node
-                    _logger.LogInformation("Updating existing node: {NodeId}", node.Id);
-                    
-                    context.Entry(existingNode).CurrentValues.SetValues(node);
-                    existingNode.LastSeen = DateTime.UtcNow;
-                    
-                    // Make sure the node is marked as healthy
-                    if (existingNode.Status == null)
+                    existingNode.Status = new NodeStatus
                     {
-                        existingNode.Status = new NodeStatus
-                        {
-                            IsHealthy = true,
-                            CurrentLoad = 0,
-                            AvailableSpace = 0,
-                            ActiveConnections = 0,
-                            LastUpdated = DateTime.UtcNow
-                        };
-                    }
-                    else
-                    {
-                        existingNode.Status.IsHealthy = true;
-                        existingNode.Status.LastUpdated = DateTime.UtcNow;
-                    }
+                        IsHealthy = true,
+                        CurrentLoad = 0,
+                        AvailableSpace = 0,
+                        ActiveConnections = 0,
+                        LastUpdated = DateTime.UtcNow
+                    };
                 }
                 else
                 {
-                    // Add new node
-                    _logger.LogInformation("Registering new node: {NodeId}", node.Id);
-                    
-                    // Ensure node has a valid ID
-                    if (string.IsNullOrEmpty(node.Id))
-                    {
-                        node.Id = Guid.NewGuid().ToString();
-                    }
-                    
-                    // Ensure node has a valid status
-                    if (node.Status == null)
-                    {
-                        node.Status = new NodeStatus
-                        {
-                            IsHealthy = true,
-                            CurrentLoad = 0,
-                            AvailableSpace = 0,
-                            ActiveConnections = 0,
-                            LastUpdated = DateTime.UtcNow
-                        };
-                    }
-                    
-                    await context.Nodes.AddAsync(node);
+                    existingNode.Status.IsHealthy = true;
+                    existingNode.Status.LastUpdated = DateTime.UtcNow;
                 }
-
-                await context.SaveChangesAsync();
-                return true;
+                
+                // For updates, use FormattableString to ensure parameters are properly typed
+                await context.Database.ExecuteSqlRawAsync(
+                    @"UPDATE ""Nodes"" SET 
+                      ""Hostname"" = @hostname, 
+                      ""Endpoint"" = @endpoint,
+                      ""Region"" = @region,
+                      ""LastSeen"" = @lastSeen,
+                      ""TotalStorage"" = @totalStorage,
+                      ""Metadata"" = @metadata::jsonb,
+                      ""Tags"" = @tags::jsonb,
+                      ""Status_IsHealthy"" = @isHealthy,
+                      ""Status_CurrentLoad"" = @currentLoad,
+                      ""Status_AvailableSpace"" = @availableSpace,
+                      ""Status_ActiveConnections"" = @activeConnections,
+                      ""Status_LastUpdated"" = @lastUpdated,
+                      ""Status_ActiveTransfers"" = @activeTransfers,
+                      ""Status_NetworkCapacity"" = @networkCapacity,
+                      ""Status_UsedSpace"" = @usedSpace
+                      WHERE ""Id"" = @id",
+                    new NpgsqlParameter("@id", node.Id),
+                    new NpgsqlParameter("@hostname", node.Hostname),
+                    new NpgsqlParameter("@endpoint", node.Endpoint),
+                    new NpgsqlParameter("@region", (object)node.Region ?? DBNull.Value),
+                    new NpgsqlParameter("@lastSeen", node.LastSeen),
+                    new NpgsqlParameter("@totalStorage", node.TotalStorage),
+                    new NpgsqlParameter("@metadata", JsonSerializer.Serialize(node.Metadata)),
+                    new NpgsqlParameter("@tags", JsonSerializer.Serialize(node.Tags)),
+                    new NpgsqlParameter("@isHealthy", node.Status.IsHealthy),
+                    new NpgsqlParameter("@currentLoad", node.Status.CurrentLoad),
+                    new NpgsqlParameter("@availableSpace", node.Status.AvailableSpace),
+                    new NpgsqlParameter("@activeConnections", node.Status.ActiveConnections), 
+                    new NpgsqlParameter("@lastUpdated", node.Status.LastUpdated),
+                    new NpgsqlParameter("@activeTransfers", node.Status.ActiveTransfers),
+                    new NpgsqlParameter("@networkCapacity", node.Status.NetworkCapacity),
+                    new NpgsqlParameter("@usedSpace", node.Status.UsedSpace)
+                );
             }
-            finally
+            else
             {
-                // Only dispose the context if we created it
-                if (ownsContext)
+                // Add new node with raw SQL to ensure proper JSONB casting
+                _logger.LogInformation("Registering new node: {NodeId}", node.Id);
+                
+                // Ensure node has a valid ID
+                if (string.IsNullOrEmpty(node.Id))
                 {
-                    await context.DisposeAsync();
+                    node.Id = Guid.NewGuid().ToString();
                 }
+                
+                // Ensure node has initialized collections
+                if (node.Tags == null)
+                    node.Tags = new List<string>();
+                    
+                if (node.Metadata == null)
+                    node.Metadata = new Dictionary<string, string>();
+                
+                // Ensure node has a valid status
+                if (node.Status == null)
+                {
+                    node.Status = new NodeStatus
+                    {
+                        IsHealthy = true,
+                        CurrentLoad = 0,
+                        AvailableSpace = 0,
+                        ActiveConnections = 0,
+                        LastUpdated = DateTime.UtcNow,
+                        ActiveTransfers = 0,
+                        NetworkCapacity = 1000,
+                        UsedSpace = 0
+                    };
+                }
+                
+                // Use raw SQL with explicit casting for JSONB columns
+                await context.Database.ExecuteSqlRawAsync(
+                    @"INSERT INTO ""Nodes"" (""Id"", ""Hostname"", ""Endpoint"", ""Region"", 
+                      ""LastSeen"", ""TotalStorage"", ""Metadata"", ""Tags"", 
+                      ""Status_IsHealthy"", ""Status_CurrentLoad"", ""Status_AvailableSpace"", 
+                      ""Status_ActiveConnections"", ""Status_LastUpdated"",
+                      ""Status_ActiveTransfers"", ""Status_NetworkCapacity"", ""Status_UsedSpace"")
+                    VALUES (@id, @hostname, @endpoint, @region,
+                       @lastSeen, @totalStorage, @metadata::jsonb, @tags::jsonb,
+                       @isHealthy, @currentLoad, @availableSpace,
+                       @activeConnections, @lastUpdated,
+                       @activeTransfers, @networkCapacity, @usedSpace)",
+                    new NpgsqlParameter("@id", node.Id),
+                    new NpgsqlParameter("@hostname", node.Hostname),
+                    new NpgsqlParameter("@endpoint", node.Endpoint),
+                    new NpgsqlParameter("@region", (object)node.Region ?? DBNull.Value),
+                    new NpgsqlParameter("@lastSeen", node.LastSeen),
+                    new NpgsqlParameter("@totalStorage", node.TotalStorage),
+                    new NpgsqlParameter { 
+                        ParameterName = "@metadata", 
+                        NpgsqlDbType = NpgsqlDbType.Jsonb, 
+                        Value = JsonSerializer.Serialize(node.Metadata) 
+                    },
+                    new NpgsqlParameter { 
+                        ParameterName = "@tags", 
+                        NpgsqlDbType = NpgsqlDbType.Jsonb, 
+                        Value = JsonSerializer.Serialize(node.Tags) 
+                    },
+                    new NpgsqlParameter("@isHealthy", node.Status.IsHealthy),
+                    new NpgsqlParameter("@currentLoad", node.Status.CurrentLoad),
+                    new NpgsqlParameter("@availableSpace", node.Status.AvailableSpace),
+                    new NpgsqlParameter("@activeConnections", node.Status.ActiveConnections), 
+                    new NpgsqlParameter("@lastUpdated", node.Status.LastUpdated),
+                    new NpgsqlParameter("@activeTransfers", node.Status.ActiveTransfers),
+                    new NpgsqlParameter("@networkCapacity", node.Status.NetworkCapacity),
+                    new NpgsqlParameter("@usedSpace", node.Status.UsedSpace)
+                );
             }
+
+            return true;
         }
-        catch (Exception ex)
+        finally
         {
-            _logger.LogError(ex, "Error registering node: {NodeId}", node.Id);
-            return false;
+            // Only dispose the context if we created it
+            if (ownsContext)
+            {
+                await context.DisposeAsync();
+            }
         }
     }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error registering node: {NodeId}", node.Id);
+        return false;
+    }
+}
 
     public async Task<bool> UpdateNodeAsync(StorageNode node)
     {
         try
         {
+            NodeRegistryInitialization.EnsureJsonSerialization(node);
+            
             var (context, ownsContext) = GetContext();
             try
             {
@@ -137,10 +233,51 @@ public class NodeRegistry : INodeRegistry
                     return false;
                 }
 
-                context.Entry(existingNode).CurrentValues.SetValues(node);
-                existingNode.LastSeen = DateTime.UtcNow;
+                // Use the same raw SQL approach with explicit casting
+                await context.Database.ExecuteSqlRawAsync(
+                    @"UPDATE ""Nodes"" SET 
+                      ""Hostname"" = @hostname, 
+                      ""Endpoint"" = @endpoint,
+                      ""Region"" = @region,
+                      ""LastSeen"" = @lastSeen,
+                      ""TotalStorage"" = @totalStorage,
+                      ""Metadata"" = @metadata::jsonb,
+                      ""Tags"" = @tags::jsonb,
+                      ""Status_IsHealthy"" = @isHealthy,
+                      ""Status_CurrentLoad"" = @currentLoad,
+                      ""Status_AvailableSpace"" = @availableSpace,
+                      ""Status_ActiveConnections"" = @activeConnections,
+                      ""Status_LastUpdated"" = @lastUpdated,
+                      ""Status_ActiveTransfers"" = @activeTransfers,
+                      ""Status_NetworkCapacity"" = @networkCapacity,
+                      ""Status_UsedSpace"" = @usedSpace
+                      WHERE ""Id"" = @id",
+                    new NpgsqlParameter("@id", node.Id),
+                    new NpgsqlParameter("@hostname", node.Hostname),
+                    new NpgsqlParameter("@endpoint", node.Endpoint),
+                    new NpgsqlParameter("@region", (object)node.Region ?? DBNull.Value),
+                    new NpgsqlParameter("@lastSeen", node.LastSeen),
+                    new NpgsqlParameter("@totalStorage", node.TotalStorage),
+                    new NpgsqlParameter { 
+                        ParameterName = "@metadata", 
+                        NpgsqlDbType = NpgsqlDbType.Jsonb, 
+                        Value = JsonSerializer.Serialize(node.Metadata) 
+                    },
+                    new NpgsqlParameter { 
+                        ParameterName = "@tags", 
+                        NpgsqlDbType = NpgsqlDbType.Jsonb, 
+                        Value = JsonSerializer.Serialize(node.Tags) 
+                    },
+                    new NpgsqlParameter("@isHealthy", node.Status?.IsHealthy ?? true),
+                    new NpgsqlParameter("@currentLoad", node.Status?.CurrentLoad ?? 0),
+                    new NpgsqlParameter("@availableSpace", node.Status?.AvailableSpace ?? 0),
+                    new NpgsqlParameter("@activeConnections", node.Status?.ActiveConnections ?? 0),
+                    new NpgsqlParameter("@lastUpdated", node.Status?.LastUpdated ?? DateTime.UtcNow),
+                    new NpgsqlParameter("@activeTransfers", node.Status?.ActiveTransfers ?? 0),
+                    new NpgsqlParameter("@networkCapacity", node.Status?.NetworkCapacity ?? 1000),
+                    new NpgsqlParameter("@usedSpace", node.Status?.UsedSpace ?? 0)
+                );
 
-                await context.SaveChangesAsync();
                 return true;
             }
             finally

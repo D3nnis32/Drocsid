@@ -12,7 +12,6 @@ public class User
     public DateTime LastSeen { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public string PasswordHash { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public string PreferredRegion { get; set; }
     public string CurrentNodeId { get; set; }

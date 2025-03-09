@@ -8,11 +8,6 @@ public class StorageNode
     public string Id { get; set; }
     public string Hostname { get; set; }
     public string Endpoint { get; set; }
-    
-    /// <summary>
-    /// API key for authenticating requests to this node
-    /// </summary>
-    public string ApiKey { get; set; }
     public NodeStatus Status { get; set; } = new();
     public long TotalStorage { get; set; }
     public string Region { get; set; }
