@@ -19,13 +19,13 @@
       "LocalPath": "/app/FileStorage"
     },
     "NodeRegistration": {
-      "NodeId": "node3",
-      "NodeRegion": "region3",
+      "NodeId": "node5",
+      "NodeRegion": "region5",
       "RegistryUrl": "http://registry-service:5261",
-      "NodeEndpoint": "http://localhost:5188",
+      "NodeEndpoint": "http://localhost:5190",
       "DataDirectory": "/app/FileStorage",
       "HeartbeatInterval": "00:00:30",
-      "NodeTags": ["storage", "storage-3"],
+      "NodeTags": ["storage", "storage-5"],
       "DefaultTotalStorage": 53687091200,
       "DefaultAvailableStorage": 26843545600
     },
@@ -36,10 +36,10 @@
       "RetryAttempts": 3,
       "RetryDelay": "00:00:10"
     },
-    "NodeId": "node3",
-    "NodeRegion": "region3",
-    "NodeHostname": "drocsid-storage-3",
-    "NodeApiEndpoint": "http://localhost:5188",
+    "NodeId": "node5",
+    "NodeRegion": "region5",
+    "NodeHostname": "drocsid-storage-5",
+    "NodeApiEndpoint": "http://localhost:5190",
     "RegistryService": {
       "Endpoint": "http://registry-service:5261"
     },

@@ -25,7 +25,7 @@
       "NodeEndpoint": "http://localhost:5186",
       "DataDirectory": "/app/FileStorage",
       "HeartbeatInterval": "00:00:30",
-      "NodeTags": ["storage", "main"],
+      "NodeTags": ["storage", "storage-1"],
       "DefaultTotalStorage": 53687091200,
       "DefaultAvailableStorage": 26843545600
     },
@@ -44,4 +44,4 @@
       "Endpoint": "http://registry-service:5261"
     },
     "Urls": "http://*:5186"
-}
+  }

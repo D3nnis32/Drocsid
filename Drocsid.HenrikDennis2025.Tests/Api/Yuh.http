@@ -10,7 +10,7 @@ POST {{registryUrl}}/api/registry/users/register
 Content-Type: application/json
 
 {
-  "username": "testuse3r",
+  "username": "testuse43r",
   "email": "test@example.com",
   "password": "password123",
   "preferredRegion": "region1"
@@ -28,7 +28,7 @@ POST {{registryUrl}}/api/gateway/connect
 Content-Type: application/json
 
 {
-  "username": "testuse3r",
+  "username": "testuse43r",
   "password": "password123"
 }
 

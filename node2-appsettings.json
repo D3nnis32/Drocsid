@@ -1,47 +1,47 @@
 {
-  "Logging": {
-    "LogLevel": {
-      "Default": "Information",
-      "Microsoft.AspNetCore": "Warning"
-    }
-  },
-  "AllowedHosts": "*",
-  "Jwt": {
-    "Key": "44558a44c3d0415c8cc2d77fd93b67037c90dfec499aef89e1f95341e1d29f8d1d529c95fa38eeb416e11f82f13059749d34b66d5f35e6d267e44e70591cec6bc35e4fc3dac96ccfe1f007cf415f46f16f8d6bfb117ceed1e6ea4aac21626b80c28f90abd674995b544a8b964b8146786525fe08c5872a6a4dc10df95761cbd068e11e9d7348c2365aa24d180ff1768058bbd3d0e0ad23367daccef527bf8f535d0bdf5e4970441ac7a992c4dc343ffd9f58ef0e1c06d9ca4a3f65a5d4158d4e7fa43e2da815f8ebe4eab51f411c9f63d9527fd07fd02f822152671ae296b5efa551d4e6a88032480bb0309e333eab17124544eb33391a38fd9f2c923ff7c304",
-    "Issuer": "HenrikDennis",
-    "Audience": "ApiApp",
-    "ExpireDays": 7
-  },
-  "ConnectionStrings": {
-    "DefaultConnection": "Host=postgres;Database=drocsid;Username=postgres;Password=123"
-  },
-  "FileStorage": {
-    "LocalPath": "/app/FileStorage"
-  },
-  "NodeRegistration": {
+    "Logging": {
+      "LogLevel": {
+        "Default": "Information",
+        "Microsoft.AspNetCore": "Warning"
+      }
+    },
+    "AllowedHosts": "*",
+    "Jwt": {
+      "Key": "44558a44c3d0415c8cc2d77fd93b67037c90dfec499aef89e1f95341e1d29f8d1d529c95fa38eeb416e11f82f13059749d34b66d5f35e6d267e44e70591cec6bc35e4fc3dac96ccfe1f007cf415f46f16f8d6bfb117ceed1e6ea4aac21626b80c28f90abd674995b544a8b964b8146786525fe08c5872a6a4dc10df95761cbd068e11e9d7348c2365aa24d180ff1768058bbd3d0e0ad23367daccef527bf8f535d0bdf5e4970441ac7a992c4dc343ffd9f58ef0e1c06d9ca4a3f65a5d4158d4e7fa43e2da815f8ebe4eab51f411c9f63d9527fd07fd02f822152671ae296b5efa551d4e6a88032480bb0309e333eab17124544eb33391a38fd9f2c923ff7c304",
+      "Issuer": "HenrikDennis",
+      "Audience": "ApiApp",
+      "ExpireDays": 7
+    },
+    "ConnectionStrings": {
+      "DefaultConnection": "Host=postgres;Database=drocsid;Username=postgres;Password=123"
+    },
+    "FileStorage": {
+      "LocalPath": "/app/FileStorage"
+    },
+    "NodeRegistration": {
+      "NodeId": "node2",
+      "NodeRegion": "region2",
+      "RegistryUrl": "http://registry-service:5261",
+      "NodeEndpoint": "http://localhost:5187",
+      "DataDirectory": "/app/FileStorage",
+      "HeartbeatInterval": "00:00:30",
+      "NodeTags": ["storage", "storage-2"],
+      "DefaultTotalStorage": 53687091200,
+      "DefaultAvailableStorage": 26843545600
+    },
+    "FileTransfer": {
+      "MaxConcurrentTransfersPerNode": 3,
+      "TransferTimeout": "00:30:00",
+      "MaxDirectTransferSize": 104857600,
+      "RetryAttempts": 3,
+      "RetryDelay": "00:00:10"
+    },
     "NodeId": "node2",
     "NodeRegion": "region2",
-    "RegistryUrl": "http://registry-service:5261",
-    "NodeEndpoint": "http://localhost:5187",
-    "DataDirectory": "/app/FileStorage",
-    "HeartbeatInterval": "00:00:30",
-    "NodeTags": ["storage", "backup"],
-    "DefaultTotalStorage": 53687091200,
-    "DefaultAvailableStorage": 26843545600
-  },
-  "FileTransfer": {
-    "MaxConcurrentTransfersPerNode": 3,
-    "TransferTimeout": "00:30:00",
-    "MaxDirectTransferSize": 104857600,
-    "RetryAttempts": 3,
-    "RetryDelay": "00:00:10"
-  },
-  "NodeId": "node2",
-  "NodeRegion": "region2",
-  "NodeHostname": "drocsid-storage-2",
-  "NodeApiEndpoint": "http://localhost:5187",
-  "RegistryService": {
-    "Endpoint": "http://registry-service:5261"
-  },
+    "NodeHostname": "drocsid-storage-2",
+    "NodeApiEndpoint": "http://localhost:5187",
+    "RegistryService": {
+      "Endpoint": "http://registry-service:5261"
+    },
     "Urls": "http://*:5186"
-}
+  }

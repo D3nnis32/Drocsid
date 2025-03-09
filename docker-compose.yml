@@ -39,72 +39,9 @@ services:
       - drocsid-network
     restart: on-failure
 
-  api-node-1:
-    build:
-      context: .
-      dockerfile: Dockerfile.api
-    container_name: drocsid-api-1
-    depends_on:
-      registry-service:
-        condition: service_started
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ASPNETCORE_URLS=http://+:5186
-    ports:
-      - "5186:5186"
-    volumes:
-      - ./node1-appsettings.json:/app/appsettings.json
-      - api-node1-storage:/app/FileStorage
-    networks:
-      - drocsid-network
-    restart: on-failure
-
-  api-node-2:
-    build:
-      context: .
-      dockerfile: Dockerfile.api
-    container_name: drocsid-api-2
-    depends_on:
-      registry-service:
-        condition: service_started
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ASPNETCORE_URLS=http://+:5186
-    ports:
-      - "5187:5186"
-    volumes:
-      - ./node2-appsettings.json:/app/appsettings.json
-      - api-node2-storage:/app/FileStorage
-    networks:
-      - drocsid-network
-    restart: on-failure
-
-  api-node-3:
-    build:
-      context: .
-      dockerfile: Dockerfile.api
-    container_name: drocsid-api-3
-    depends_on:
-      registry-service:
-        condition: service_started
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ASPNETCORE_URLS=http://+:5186
-    ports:
-      - "5188:5186"
-    volumes:
-      - ./node3-appsettings.json:/app/appsettings.json
-      - api-node3-storage:/app/FileStorage
-    networks:
-      - drocsid-network
-    restart: on-failure
-
 networks:
   drocsid-network:
     driver: bridge
 
 volumes:
   postgres-data:
-  api-node1-storage:
-  api-node2-storage:
-  api-node3-storage:
