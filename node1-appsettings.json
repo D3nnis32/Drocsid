@@ -22,10 +22,23 @@
       "NodeId": "node1",
       "NodeRegion": "region1",
       "RegistryUrl": "http://registry-service:5261",
-      "NodeEndpoint": "http://drocsid-api-1:5186",
+      "NodeEndpoint": "http://localhost:5186",
       "DataDirectory": "/app/FileStorage",
       "HeartbeatInterval": "00:00:30",
       "NodeTags": ["storage", "main"]
     },
-    "Urls": "http://*:5186"
+    "FileTransfer": {
+      "MaxConcurrentTransfersPerNode": 3,
+      "TransferTimeout": "00:30:00",
+      "MaxDirectTransferSize": 104857600,
+      "RetryAttempts": 3,
+      "RetryDelay": "00:00:10"
+    },
+    "NodeId": "node1",
+    "NodeRegion": "region1",
+    "NodeHostname": "drocsid-storage-1",
+    "NodeApiEndpoint": "http://localhost:5186",
+    "RegistryService": {
+      "Endpoint": "http://registry-service:5261"
+    }
   }

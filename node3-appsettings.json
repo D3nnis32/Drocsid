@@ -22,7 +22,7 @@
     "NodeId": "node3",
     "NodeRegion": "region3",
     "RegistryUrl": "http://registry-service:5261",
-    "NodeEndpoint": "http://drocsid-api-3:5186",
+    "NodeEndpoint": "http://localhost:5186",
     "DataDirectory": "/app/FileStorage",
     "HeartbeatInterval": "00:00:30",
     "NodeTags": ["storage", "archive"]

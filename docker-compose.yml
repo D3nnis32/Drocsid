@@ -30,7 +30,6 @@ services:
         condition: service_healthy
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      - ConnectionStrings__RegistryConnection=Host=postgres;Database=drocsid_registry;Username=postgres;Password=123
       - ASPNETCORE_URLS=http://+:5261
     ports:
       - "5261:5261"
@@ -50,15 +49,6 @@ services:
         condition: service_started
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=drocsid;Username=postgres;Password=123
-      - NodeRegistration__NodeId=node1
-      - NodeRegistration__NodeRegion=region1
-      - NodeRegistration__RegistryUrl=http://drocsid-registry:5261
-      - NodeRegistration__NodeEndpoint=http://drocsid-api-1:5186
-      - NodeRegistration__DataDirectory=/app/FileStorage
-      - NodeRegistration__HeartbeatInterval=00:00:30
-      - NodeRegistration__NodeTags__0=storage
-      - NodeRegistration__NodeTags__1=main
       - ASPNETCORE_URLS=http://+:5186
     ports:
       - "5186:5186"
@@ -79,15 +69,6 @@ services:
         condition: service_started
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=drocsid;Username=postgres;Password=123
-      - NodeRegistration__NodeId=node2
-      - NodeRegistration__NodeRegion=region2
-      - NodeRegistration__RegistryUrl=http://drocsid-registry:5261
-      - NodeRegistration__NodeEndpoint=http://drocsid-api-2:5186
-      - NodeRegistration__DataDirectory=/app/FileStorage
-      - NodeRegistration__HeartbeatInterval=00:00:30
-      - NodeRegistration__NodeTags__0=storage
-      - NodeRegistration__NodeTags__1=backup
       - ASPNETCORE_URLS=http://+:5186
     ports:
       - "5187:5186"
@@ -108,15 +89,6 @@ services:
         condition: service_started
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=drocsid;Username=postgres;Password=123
-      - NodeRegistration__NodeId=node3
-      - NodeRegistration__NodeRegion=region3
-      - NodeRegistration__RegistryUrl=http://drocsid-registry:5261
-      - NodeRegistration__NodeEndpoint=http://drocsid-api-3:5186
-      - NodeRegistration__DataDirectory=/app/FileStorage
-      - NodeRegistration__HeartbeatInterval=00:00:30
-      - NodeRegistration__NodeTags__0=storage
-      - NodeRegistration__NodeTags__1=archive
       - ASPNETCORE_URLS=http://+:5186
     ports:
       - "5188:5186"

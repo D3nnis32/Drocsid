@@ -57,7 +57,7 @@ Content-Type: application/json
 %}
 
 ### Connect admin to gateway
-POST {{registryUrl}}/api/gateway/connect
+POST localhost:5187/api/gateway/connect
 Content-Type: application/json
 
 {
