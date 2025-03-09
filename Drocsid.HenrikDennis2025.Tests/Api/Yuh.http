@@ -29,10 +29,10 @@ POST {{registryUrl}}/api/registry/users/register
 Content-Type: application/json
 
 {
-  "username": "2",
+  "username": "8",
   "email": "test@example.com",
   "password": "1",
-  "preferredRegion": "region1"
+  "preferredRegion": "Region5"
 }
 
 ### Step 2: Login through the Gateway to get token and node assignment
@@ -40,7 +40,7 @@ POST {{registryUrl}}/api/gateway/connect
 Content-Type: application/json
 
 {
-  "username": "1",
+  "username": "8",
   "password": "1"
 }
 

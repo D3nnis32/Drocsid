@@ -1,11 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net8.0-windows</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <RootNamespace>Drocsid.HenrikDennis2025.Core</RootNamespace>
-        <PackageId>Core</PackageId>
     </PropertyGroup>
 
     <ItemGroup>
@@ -14,6 +12,14 @@
 
     <ItemGroup>
       <PackageReference Include="PresentationFramework" Version="4.6.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Reference Include="Microsoft.AspNetCore.Mvc.Core" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Reference Include="Microsoft.AspNetCore.Mvc.Core" />
     </ItemGroup>
 
 </Project>
