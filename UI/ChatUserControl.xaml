@@ -292,5 +292,13 @@
                              Margin="0,10,0,0"/>
             </StackPanel>
         </Border>
+        
+        <!-- Plugin Content Container - Fix Z-Index and positioning -->
+        <ContentControl Grid.Row="1" 
+                        Content="{Binding ActivePluginContent}" 
+                        Visibility="{Binding IsPluginActive, Converter={StaticResource BooleanToVisibilityConverter}}"
+                        Panel.ZIndex="100"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center" />
     </Grid>
 </UserControl>
