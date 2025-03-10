@@ -13,15 +13,18 @@ namespace Drocsid.HenrikDennis2025.Api.Controllers;
     {
         private readonly IMessageService _messageService;
         private readonly IChannelService _channelService;
+        private readonly IFileStorageService _fileStorageService;
 
         public MessagesController(
             IMessageService messageService, 
             IChannelService channelService,
+            IFileStorageService fileStorageService,
             ILogger<MessagesController> logger) 
             : base(logger)
         {
             _messageService = messageService;
             _channelService = channelService;
+            _fileStorageService = fileStorageService;
         }
 
         [HttpGet]
@@ -51,7 +54,7 @@ namespace Drocsid.HenrikDennis2025.Api.Controllers;
             // Check if the user is a member of the channel
             var userId = GetCurrentUserId();
             var channel = await _channelService.GetChannelByIdAsync(channelId);
-            
+    
             if (channel == null)
             {
                 return NotFound();
@@ -62,12 +65,39 @@ namespace Drocsid.HenrikDennis2025.Api.Controllers;
                 return Forbid();
             }
 
+            // Create a list to hold attachment objects
+            var attachments = new List<Attachment>();
+    
+            // If there are attachment IDs, fetch the complete attachment information
+            if (request.AttachmentIds != null && request.AttachmentIds.Any())
+            {
+                // Use your file/attachment service to get complete attachment info
+                foreach (var attachmentId in request.AttachmentIds)
+                {
+                    // Fetch the complete attachment information from your file service
+                    var attachmentInfo = await _fileStorageService.GetFileInfoAsync(attachmentId.ToString());
+            
+                    if (attachmentInfo != null)
+                    {
+                        attachments.Add(new Attachment 
+                        { 
+                            Id = attachmentId,
+                            Filename = attachmentInfo.Filename,
+                            ContentType = attachmentInfo.ContentType,
+                            Path = attachmentInfo.Path,
+                            Size = attachmentInfo.Size,
+                            UploadedAt = DateTime.UtcNow
+                        });
+                    }
+                }
+            }
+
             var message = new Message
             {
                 ChannelId = channelId,
                 SenderId = userId,
                 Content = request.Content,
-                Attachments = request.AttachmentIds?.Select(id => new Attachment { Id = id }).ToList() ?? new List<Attachment>()
+                Attachments = attachments
             };
 
             var createdMessage = await _messageService.CreateMessageAsync(message);
