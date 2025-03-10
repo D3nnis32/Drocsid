@@ -31,15 +31,38 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
                 <TextBlock Text="{Binding ChannelName}" Foreground="White" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Margin="15,0,0,0"/>
 
-                <!--  Button  HERE-->
-                <!--  Button  HERE-->
+                <!-- Voice Chat Button -->
+                <Button Grid.Column="1" 
+                        Command="{Binding StartVoiceChatCommand}" 
+                        Content="🎤" 
+                        Foreground="White" 
+                        Background="Transparent" 
+                        BorderThickness="0" 
+                        FontSize="14" 
+                        Margin="0,0,15,0"
+                        ToolTip="Start Voice Chat Session"
+                        Visibility="{Binding IsVoiceChatAvailable, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                
+                <!-- Whiteboard Button -->
+                <Button Grid.Column="2" 
+                        Command="{Binding StartWhiteboardCommand}" 
+                        Content="🖌️" 
+                        Foreground="White" 
+                        Background="Transparent" 
+                        BorderThickness="0" 
+                        FontSize="14" 
+                        Margin="0,0,15,0"
+                        ToolTip="Start Whiteboard Session"
+                        Visibility="{Binding IsWhiteboardAvailable, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                 
                 <!-- Plugin Manager Button -->
-                <Button Grid.Column="1" 
+                <Button Grid.Column="3" 
                         Command="{Binding ShowPluginsCommand}" 
                         Content="🧩 Plugins" 
                         Foreground="White" 
@@ -48,10 +71,10 @@
                         FontSize="14" 
                         Margin="0,0,15,0"
                         ToolTip="Manage Plugins"/>
-                <Button Grid.Column="2" Command="{Binding RefreshMessagesCommand}" Content="↻" Foreground="White" Background="Transparent" BorderThickness="0" FontSize="16" Margin="0,0,10,0"/>
+                <Button Grid.Column="4" Command="{Binding RefreshMessagesCommand}" Content="↻" Foreground="White" Background="Transparent" BorderThickness="0" FontSize="16" Margin="0,0,10,0"/>
 
                 <!-- Add Members Button -->
-                <Button Grid.Column="3"
+                <Button Grid.Column="5"
                 Command="{Binding OpenAddMembersWindowCommand}"
                 Content="➕ Add Members"
                 Foreground="White"

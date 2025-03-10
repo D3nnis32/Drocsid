@@ -1,5 +1,7 @@
 ﻿using Drocsid.HenrikDennis2025.Core.DTO;
 using Drocsid.HenrikDennis2025.Core.Models;
+using Drocsid.HenrikDennis2025.PluginContracts.Interfaces;
+using Drocsid.HenrikDennis2025.PluginContracts.Models;
 using Microsoft.Win32;
 using System;
 using System.Collections.ObjectModel;
@@ -10,6 +12,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 using Logic.UI.ViewModels.Services;
@@ -25,11 +28,19 @@ namespace Logic.UI.ViewModels
         private string _errorMessage;
         private System.Windows.Threading.DispatcherTimer _refreshTimer;
         private bool _isAttaching;
+        private bool _isVoiceChatAvailable;
+        private bool _isWhiteboardAvailable;
+        private bool _isPluginActive;
+        private ContentControl _activePluginContent;
+        private string _activePluginSessionId;
+        private string _activePluginType;
+
         public Channel Channel => _channel;
         public ObservableCollection<Message> Messages { get; } = new ObservableCollection<Message>();
 
         // Collection to hold pending attachments
-        public ObservableCollection<PendingAttachment> PendingAttachments { get; } = new ObservableCollection<PendingAttachment>();
+        public ObservableCollection<PendingAttachment> PendingAttachments { get; } =
+            new ObservableCollection<PendingAttachment>();
 
         public string ChannelName => _channel?.Name ?? "Unknown Channel";
 
@@ -76,9 +87,52 @@ namespace Logic.UI.ViewModels
             }
         }
 
+        public bool IsVoiceChatAvailable
+        {
+            get => _isVoiceChatAvailable;
+            set
+            {
+                _isVoiceChatAvailable = value;
+                OnPropertyChanged(nameof(IsVoiceChatAvailable));
+            }
+        }
+
+        public bool IsWhiteboardAvailable
+        {
+            get => _isWhiteboardAvailable;
+            set
+            {
+                _isWhiteboardAvailable = value;
+                OnPropertyChanged(nameof(IsWhiteboardAvailable));
+            }
+        }
+
+        public bool IsPluginActive
+        {
+            get => _isPluginActive;
+            set
+            {
+                _isPluginActive = value;
+                OnPropertyChanged(nameof(IsPluginActive));
+            }
+        }
+
+        public ContentControl ActivePluginContent
+        {
+            get => _activePluginContent;
+            set
+            {
+                _activePluginContent = value;
+                OnPropertyChanged(nameof(ActivePluginContent));
+                IsPluginActive = (value != null);
+            }
+        }
+
         public RelayCommand SendMessageCommand { get; }
         public RelayCommand RefreshMessagesCommand { get; }
         public ICommand ShowPluginsCommand { get; }
+        public ICommand StartVoiceChatCommand { get; }
+        public ICommand StartWhiteboardCommand { get; }
         public RelayCommand AddAttachmentCommand { get; }
         public RelayCommand<PendingAttachment> RemoveAttachmentCommand { get; }
         public RelayCommand<Attachment> DownloadAttachmentCommand { get; }
@@ -86,18 +140,31 @@ namespace Logic.UI.ViewModels
 
         public event EventHandler RequestOpenAddMembersWindow;
         public event EventHandler RequestShowPluginsWindow;
+        public event EventHandler<PluginSessionEventArgs> PluginSessionStarted;
 
         public ChatViewModel(Channel channel)
         {
             _channel = channel ?? throw new ArgumentNullException(nameof(channel));
-            _httpClient = new HttpClient { BaseAddress = new Uri("http://localhost:5186/") };
+            _httpClient = new HttpClient
+                { BaseAddress = new Uri(TokenStorage.CurrentNodeEndpoint ?? "http://localhost:5186/") };
 
             SendMessageCommand = new RelayCommand(
                 execute: SendMessage,
-                canExecute: () => (!string.IsNullOrWhiteSpace(MessageText) || PendingAttachments.Count > 0) && !IsSending
+                canExecute: () =>
+                    (!string.IsNullOrWhiteSpace(MessageText) || PendingAttachments.Count > 0) && !IsSending
             );
-            
+
             ShowPluginsCommand = new RelayCommand(OnShowPluginsDialog);
+
+            StartVoiceChatCommand = new RelayCommand(
+                execute: StartVoiceChat,
+                canExecute: () => IsVoiceChatAvailable && !IsPluginActive
+            );
+
+            StartWhiteboardCommand = new RelayCommand(
+                execute: StartWhiteboard,
+                canExecute: () => IsWhiteboardAvailable && !IsPluginActive
+            );
 
             OpenAddMembersWindowCommand = new RelayCommand(OpenAddMembersWindow);
 
@@ -116,12 +183,13 @@ namespace Logic.UI.ViewModels
             );
 
             DownloadAttachmentCommand = new RelayCommand<Attachment>(
-            execute: async (attachment) => await DownloadAttachmentAsync(attachment),
-            canExecute: (attachment) => attachment != null
+                execute: async (attachment) => await DownloadAttachmentAsync(attachment),
+                canExecute: (attachment) => attachment != null
             );
 
             // Initialize timer on UI thread to avoid threading issues
-            System.Windows.Application.Current.Dispatcher.Invoke(() => {
+            System.Windows.Application.Current.Dispatcher.Invoke(() =>
+            {
                 // Set up a timer to refresh messages
                 _refreshTimer = new System.Windows.Threading.DispatcherTimer
                 {
@@ -133,8 +201,225 @@ namespace Logic.UI.ViewModels
 
             // Load initial messages
             Task.Run(async () => await LoadMessagesAsync());
+
+            // Check for available plugins
+            CheckAvailablePlugins();
         }
+
+        private async void CheckAvailablePlugins()
+        {
+            try
+            {
+                // Add the auth token
+                _httpClient.DefaultRequestHeaders.Authorization =
+                    new AuthenticationHeaderValue("Bearer", TokenStorage.JwtToken);
+
+                // Check for voice chat plugin
+                var voiceChatResponse =
+                    await _httpClient.GetAsync("api/plugins/channel/" + _channel.Id + "/communication");
+                if (voiceChatResponse.IsSuccessStatusCode)
+                {
+                    var plugins = await voiceChatResponse.Content.ReadFromJsonAsync<PluginInfo[]>();
+                    IsVoiceChatAvailable = plugins != null && plugins.Length > 0;
+                }
+
+                // Check for whiteboard plugin
+                var whiteboardResponse =
+                    await _httpClient.GetAsync("api/plugins/channel/" + _channel.Id + "/collaboration");
+                if (whiteboardResponse.IsSuccessStatusCode)
+                {
+                    var plugins = await whiteboardResponse.Content.ReadFromJsonAsync<PluginInfo[]>();
+                    IsWhiteboardAvailable = plugins != null && plugins.Length > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error checking for plugins: {ex.Message}");
+                // Don't show an error message to the user, just log it
+            }
+        }
+
+        private async void StartVoiceChat()
+        {
+            try
+            {
+                if (IsPluginActive)
+                {
+                    await EndActivePluginSession();
+                }
+                
+                // Add the auth token
+                _httpClient.DefaultRequestHeaders.Authorization = 
+                    new AuthenticationHeaderValue("Bearer", TokenStorage.JwtToken);
+                
+                // Get the first voice chat plugin
+                var response = await _httpClient.GetAsync("api/plugins/channel/" + _channel.Id + "/communication");
+                Console.WriteLine($"DEBUG: Voice chat plugin response status: {response.StatusCode}");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var plugins = await response.Content.ReadFromJsonAsync<PluginInfo[]>();
+                    Console.WriteLine($"DEBUG: Found {plugins?.Length ?? 0} voice chat plugins");
+                    
+                    if (plugins != null && plugins.Length > 0)
+                    {
+                        // Start a voice chat session - UPDATED ENDPOINT
+                        var startResponse = await _httpClient.PostAsync(
+                            $"api/channels/{_channel.Id}/communication/{plugins[0].Id}/start?mode=Audio", 
+                            null);
+                        
+                        Console.WriteLine($"DEBUG: Start voice chat response status: {startResponse.StatusCode}");
+                        
+                        if (startResponse.IsSuccessStatusCode)
+                        {
+                            var sessionInfo = await startResponse.Content.ReadFromJsonAsync<PluginSessionInfo>();
+                            Console.WriteLine($"DEBUG: Created voice chat session with ID: {sessionInfo.SessionId}");
+                            
+                            _activePluginSessionId = sessionInfo.SessionId;
+                            _activePluginType = "voice";
+                            
+                            // Raise event to notify the view to create the plugin UI
+                            PluginSessionStarted?.Invoke(this, new PluginSessionEventArgs 
+                            { 
+                                SessionId = sessionInfo.SessionId,
+                                PluginType = "voice",
+                                UiComponent = sessionInfo.UiComponent
+                            });
+                        }
+                        else
+                        {
+                            var error = await startResponse.Content.ReadAsStringAsync();
+                            ErrorMessage = $"Failed to start voice chat: {error}";
+                            Console.WriteLine($"DEBUG: Voice chat start error: {error}");
+                        }
+                    }
+                    else
+                    {
+                        ErrorMessage = "No voice chat plugins are available.";
+                        Console.WriteLine("DEBUG: No voice chat plugins found");
+                    }
+                }
+                else
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    ErrorMessage = $"Failed to get voice chat plugins: {error}";
+                    Console.WriteLine($"DEBUG: Voice chat plugin query error: {error}");
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = $"Error starting voice chat: {ex.Message}";
+                Console.WriteLine($"DEBUG: Exception in StartVoiceChat: {ex}");
+            }
+        }
+
+        private async void StartWhiteboard()
+        {
+            try
+            {
+                if (IsPluginActive)
+                {
+                    await EndActivePluginSession();
+                }
+                
+                // Add the auth token
+                _httpClient.DefaultRequestHeaders.Authorization = 
+                    new AuthenticationHeaderValue("Bearer", TokenStorage.JwtToken);
+                
+                // Get the first whiteboard plugin
+                var response = await _httpClient.GetAsync("api/plugins/channel/" + _channel.Id + "/collaboration");
+                Console.WriteLine($"DEBUG: Whiteboard plugin response status: {response.StatusCode}");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var plugins = await response.Content.ReadFromJsonAsync<PluginInfo[]>();
+                    Console.WriteLine($"DEBUG: Found {plugins?.Length ?? 0} whiteboard plugins");
+                    
+                    if (plugins != null && plugins.Length > 0)
+                    {
+                        // Start a whiteboard session - UPDATED ENDPOINT
+                        var startResponse = await _httpClient.PostAsync(
+                            $"api/channels/{_channel.Id}/collaboration/{plugins[0].Id}/start", 
+                            null);
+                        
+                        Console.WriteLine($"DEBUG: Start whiteboard response status: {startResponse.StatusCode}");
+                        
+                        if (startResponse.IsSuccessStatusCode)
+                        {
+                            var sessionInfo = await startResponse.Content.ReadFromJsonAsync<PluginSessionInfo>();
+                            Console.WriteLine($"DEBUG: Created whiteboard session with ID: {sessionInfo.SessionId}");
+                            
+                            _activePluginSessionId = sessionInfo.SessionId;
+                            _activePluginType = "whiteboard";
+                            
+                            // Raise event to notify the view to create the plugin UI
+                            PluginSessionStarted?.Invoke(this, new PluginSessionEventArgs 
+                            { 
+                                SessionId = sessionInfo.SessionId,
+                                PluginType = "whiteboard",
+                                UiComponent = sessionInfo.UiComponent
+                            });
+                        }
+                        else
+                        {
+                            var error = await startResponse.Content.ReadAsStringAsync();
+                            ErrorMessage = $"Failed to start whiteboard: {error}";
+                            Console.WriteLine($"DEBUG: Whiteboard start error: {error}");
+                        }
+                    }
+                    else
+                    {
+                        ErrorMessage = "No whiteboard plugins are available.";
+                        Console.WriteLine("DEBUG: No whiteboard plugins found");
+                    }
+                }
+                else
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    ErrorMessage = $"Failed to get whiteboard plugins: {error}";
+                    Console.WriteLine($"DEBUG: Whiteboard plugin query error: {error}");
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = $"Error starting whiteboard: {ex.Message}";
+                Console.WriteLine($"DEBUG: Exception in StartWhiteboard: {ex}");
+            }
+        }
+
+        private async Task EndActivePluginSession()
+        {
+            if (string.IsNullOrEmpty(_activePluginSessionId))
+                return;
         
+            try
+            {
+                // Add the auth token
+                _httpClient.DefaultRequestHeaders.Authorization = 
+                    new AuthenticationHeaderValue("Bearer", TokenStorage.JwtToken);
+        
+                // End the session based on the plugin type - UPDATED ENDPOINTS
+                string endpoint = _activePluginType == "voice" 
+                    ? $"api/channels/{_channel.Id}/communication/session/{_activePluginSessionId}/end"
+                    : $"api/channels/{_channel.Id}/collaboration/session/{_activePluginSessionId}/end";
+        
+                Console.WriteLine($"DEBUG: Ending {_activePluginType} session with ID: {_activePluginSessionId}");
+        
+                var response = await _httpClient.PostAsync(endpoint, null);
+                Console.WriteLine($"DEBUG: End session response status: {response.StatusCode}");
+        
+                // Clear the active plugin
+                _activePluginSessionId = null;
+                _activePluginType = null;
+                ActivePluginContent = null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"DEBUG: Error ending plugin session: {ex.Message}");
+                // Don't show an error message to the user, just log it
+            }
+        }
+
         private void OnShowPluginsDialog()
         {
             try
@@ -147,7 +432,7 @@ namespace Logic.UI.ViewModels
                 ErrorMessage = $"Error opening plugins dialog: {ex.Message}";
             }
         }
-        
+
         private void OpenAddMembersWindow()
         {
             RequestOpenAddMembersWindow?.Invoke(this, EventArgs.Empty);
@@ -185,6 +470,7 @@ namespace Logic.UI.ViewModels
                 ErrorMessage = "Error downloading file.";
             }
         }
+
         private void AddAttachment()
         {
             try
@@ -339,6 +625,7 @@ namespace Logic.UI.ViewModels
                 {
                     return await response.Content.ReadFromJsonAsync<Attachment>();
                 }
+
                 return null;
             }
             catch (Exception ex)
@@ -401,16 +688,19 @@ namespace Logic.UI.ViewModels
                         {
                             if (message.Attachments != null && message.Attachments.Any())
                             {
-                                Console.WriteLine($"DEBUG: Message {message.Id} has {message.Attachments.Count} attachments");
+                                Console.WriteLine(
+                                    $"DEBUG: Message {message.Id} has {message.Attachments.Count} attachments");
                                 foreach (var attachment in message.Attachments)
                                 {
-                                    Console.WriteLine($"DEBUG: Attachment ID: {attachment.Id}, Filename: {attachment.Filename ?? "null"}");
+                                    Console.WriteLine(
+                                        $"DEBUG: Attachment ID: {attachment.Id}, Filename: {attachment.Filename ?? "null"}");
                                 }
                             }
                             else
                             {
                                 Console.WriteLine($"DEBUG: Message {message.Id} has no attachments");
                             }
+
                             Messages.Add(message);
                         }
                     });
@@ -431,6 +721,12 @@ namespace Logic.UI.ViewModels
         public void Dispose()
         {
             _refreshTimer.Stop();
+
+            // End any active plugin session
+            if (!string.IsNullOrEmpty(_activePluginSessionId))
+            {
+                _ = EndActivePluginSession();
+            }
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -465,5 +761,32 @@ namespace Logic.UI.ViewModels
                 };
             }
         }
+    }
+
+    // Plugin info model
+    public class PluginInfo
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public string Version { get; set; }
+        public string Author { get; set; }
+        public string State { get; set; }
+        public string Type { get; set; }
+    }
+
+    // Plugin session info model
+    public class PluginSessionInfo
+    {
+        public string SessionId { get; set; }
+        public UiComponent UiComponent { get; set; }
+    }
+
+    // Event args for plugin session events
+    public class PluginSessionEventArgs : EventArgs
+    {
+        public string SessionId { get; set; }
+        public string PluginType { get; set; }
+        public UiComponent UiComponent { get; set; }
     }
 }
