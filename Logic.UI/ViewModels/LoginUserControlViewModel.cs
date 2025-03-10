@@ -62,10 +62,13 @@ namespace Logic.UI.ViewModels
         }
 
         public RelayCommand LoginCommand { get; }
-
+        
         // Event to signal successful login
         public event EventHandler LoginSuccessful;
 
+        public RelayCommand OpenRegisterWindowCommand { get; }
+
+        public event EventHandler RequestOpenRegisterWindow;
         public LoginUserControlViewModel()
         {
             _httpClient = new HttpClient { BaseAddress = new Uri("http://localhost:5261/") };
@@ -75,6 +78,7 @@ namespace Logic.UI.ViewModels
                                  !string.IsNullOrWhiteSpace(Password) &&
                                  !IsLoggingIn
             );
+            OpenRegisterWindowCommand = new RelayCommand(OpenRegisterWindow);
         }
 
         public void Login()
@@ -82,7 +86,11 @@ namespace Logic.UI.ViewModels
             // Start the async operation
             _ = LoginAsync();
         }
-
+        private void OpenRegisterWindow()
+        {
+            // Fire an event that the code-behind will handle
+            RequestOpenRegisterWindow?.Invoke(this, EventArgs.Empty);
+        }
         private async Task LoginAsync()
         {
             try

@@ -43,23 +43,43 @@
                                  BorderThickness="0"
                                  PasswordChanged="PasswordBox_PasswordChanged"/>
                 </Border>
-                <Button Margin="10" 
-                        Width="50" 
-                        HorizontalAlignment="Right"
-                        Command="{Binding LoginCommand}">
-                    <Button.Template>
-                        <ControlTemplate TargetType="Button">
-                            <Border Background="{TemplateBinding Background}"
-                                    CornerRadius="5">
-                                <TextBlock Text="Login"
-                                           FontSize="10"
-                                           Foreground="Black"
-                                           VerticalAlignment="Center"
-                                           HorizontalAlignment="Center"/>
-                            </Border>
-                        </ControlTemplate>
-                    </Button.Template>
-                </Button>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Margin="10" 
+        Width="50" 
+        HorizontalAlignment="Right"
+        Command="{Binding OpenRegisterWindowCommand}">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border Background="{TemplateBinding Background}"
+                    CornerRadius="5">
+                                    <TextBlock Text="Register"
+                           FontSize="10"
+                           Foreground="Black"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Center"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+
+                    <Button Margin="10" 
+                            Width="50" 
+                            HorizontalAlignment="Right"
+                            Command="{Binding LoginCommand}">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border Background="{TemplateBinding Background}"
+                                        CornerRadius="5">
+                                    <TextBlock Text="Login"
+                                               FontSize="10"
+                                               Foreground="Black"
+                                               VerticalAlignment="Center"
+                                               HorizontalAlignment="Center"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </StackPanel>
                 <TextBlock Text="{Binding ErrorMessage}" Foreground="Red">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">

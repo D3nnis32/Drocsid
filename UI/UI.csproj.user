@@ -22,6 +22,9 @@
     <Compile Update="LoginUserControl.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="RegisterNewUserWindow.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Page Update="AddChannelWindow.xaml">
@@ -40,6 +43,9 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Update="MainWindow.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="RegisterNewUserWindow.xaml">
       <SubType>Designer</SubType>
     </Page>
   </ItemGroup>

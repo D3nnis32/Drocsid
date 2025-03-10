@@ -80,11 +80,11 @@ Content-Type: application/json
 %}
 
 ### Step 4: Verify the token with the second storage node (this syncs the user to node2)
-POST http://localhost:5186/api/auth/verify-token
+POST {{nodeUrl}}/api/auth/verify-token
 Content-Type: application/json
 
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzZjNkOGRiMS02Njg2LTRiMDAtOTc1Ni1mOTI2OGM2NzA2ZDciLCJ1bmlxdWVfbmFtZSI6IjMiLCJqdGkiOiJjN2Y3YTFjZC0zYzBlLTRkZDAtYjViMi03NDE1NDg2NDJlZGEiLCJleHAiOjE3NDIxNzc2ODIsImlzcyI6IkhlbnJpa0Rlbm5pcyIsImF1ZCI6IkFwaUFwcCJ9.KidDrvgohdPR0HAmbemHKYmtsEYL09WY_BwQ5_FbiMU"
+  "token": "{{Token}}"
 }
 
 ### Step 5: Get current user info (from node1) to confirm everything works
