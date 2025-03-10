@@ -63,7 +63,7 @@ namespace VoiceChatPlugin
             _context.Logger.Info("Voice Chat Plugin shutdown complete");
         }
 
-        public async Task<UserControl> StartSessionAsync(Guid channelId, CommunicationMode mode)
+        public async Task<UiComponent> StartSessionAsync(Guid channelId, CommunicationMode mode)
         {
             if (mode != CommunicationMode.Audio)
             {
@@ -90,13 +90,13 @@ namespace VoiceChatPlugin
             // Store the session
             _activeSessions[sessionId] = session;
             
-            // Create and return the UI control
-            var control = new VoiceChatControl(sessionId, _context);
+            // Create and return the UI component
+            var component = CreateVoiceChatComponent(sessionId);
             
-            return await Task.FromResult(control);
+            return await Task.FromResult(component);
         }
 
-        public async Task<UserControl> JoinSessionAsync(string sessionId)
+        public async Task<UiComponent> JoinSessionAsync(string sessionId)
         {
             if (!_activeSessions.TryGetValue(sessionId, out var session))
             {
@@ -111,10 +111,10 @@ namespace VoiceChatPlugin
                 session.Participants.Add(_context.UserSession.CurrentUserId);
             }
             
-            // Create and return the UI control
-            var control = new VoiceChatControl(sessionId, _context);
+            // Create and return the UI component
+            var component = CreateVoiceChatComponent(sessionId);
             
-            return await Task.FromResult(control);
+            return await Task.FromResult(component);
         }
 
         public async Task EndSessionAsync(string sessionId)
@@ -132,10 +132,24 @@ namespace VoiceChatPlugin
             await Task.CompletedTask;
         }
 
-        public UserControl GetSettingsView()
+        public UiComponent GetSettingsView()
         {
             // Return a settings UI for configuring the voice chat plugin
-            return new VoiceChatSettings(_context);
+            return new UiComponent
+            {
+                Id = "voice-chat-settings",
+                ComponentType = "VoiceChatSettings",
+                Configuration = @"{
+                    ""microphoneDevice"": ""default"",
+                    ""speakerDevice"": ""default"",
+                    ""sampleRate"": 48000,
+                    ""bitDepth"": 16
+                }",
+                Properties = new Dictionary<string, string>
+                {
+                    ["title"] = "Voice Chat Settings"
+                }
+            };
         }
 
         private void OnChannelOpened(object channelInfo)
@@ -153,6 +167,27 @@ namespace VoiceChatPlugin
                 _ = EndSessionAsync(session.Id);
             }
         }
+
+        // Helper method to create a voice chat UI component
+        private UiComponent CreateVoiceChatComponent(string sessionId)
+        {
+            return new UiComponent
+            {
+                Id = $"voice-chat-{sessionId}",
+                ComponentType = "VoiceChatControl",
+                Configuration = $@"{{
+                    ""sessionId"": ""{sessionId}"",
+                    ""status"": ""Connected"",
+                    ""isMuted"": false,
+                    ""volume"": 80
+                }}",
+                Properties = new Dictionary<string, string>
+                {
+                    ["title"] = "Voice Chat",
+                    ["statusColor"] = "green"
+                }
+            };
+        }
     }
 
     /// <summary>
@@ -164,130 +199,5 @@ namespace VoiceChatPlugin
         public Guid ChannelId { get; set; }
         public DateTime StartTime { get; set; }
         public List<Guid> Participants { get; set; }
-    }
-
-    /// <summary>
-    /// Simple UI control for voice chat
-    /// </summary>
-    internal class VoiceChatControl : UserControl
-    {
-        private readonly string _sessionId;
-        private readonly IPluginContext _context;
-        
-        public VoiceChatControl(string sessionId, IPluginContext context)
-        {
-            _sessionId = sessionId;
-            _context = context;
-            
-            // In a real implementation, this would set up the UI for voice chat
-            // including microphone level, mute button, participants list, etc.
-            
-            // For this example, we'll just create a simple placeholder UI
-            var grid = new Grid();
-            
-            var stackPanel = new StackPanel
-            {
-                Orientation = Orientation.Vertical
-            };
-            
-            var titleLabel = new Label
-            {
-                Content = "Voice Chat",
-                FontWeight = System.Windows.FontWeights.Bold,
-                HorizontalAlignment = System.Windows.HorizontalAlignment.Center
-            };
-            
-            var statusLabel = new Label
-            {
-                Content = "Connected",
-                Foreground = System.Windows.Media.Brushes.Green
-            };
-            
-            var muteButton = new Button
-            {
-                Content = "Mute",
-                Margin = new System.Windows.Thickness(5),
-                Padding = new System.Windows.Thickness(10, 5, 10, 5)
-            };
-            
-            stackPanel.Children.Add(titleLabel);
-            stackPanel.Children.Add(statusLabel);
-            stackPanel.Children.Add(muteButton);
-            
-            grid.Children.Add(stackPanel);
-            
-            Content = grid;
-        }
-    }
-
-    /// <summary>
-    /// Settings UI for voice chat plugin
-    /// </summary>
-    internal class VoiceChatSettings : UserControl
-    {
-        private readonly IPluginContext _context;
-        
-        public VoiceChatSettings(IPluginContext context)
-        {
-            _context = context;
-            
-            // In a real implementation, this would set up the UI for voice chat settings
-            // including microphone selection, speaker selection, etc.
-            
-            // For this example, we'll just create a simple placeholder UI
-            var grid = new Grid();
-            
-            var stackPanel = new StackPanel
-            {
-                Orientation = Orientation.Vertical
-            };
-            
-            var titleLabel = new Label
-            {
-                Content = "Voice Chat Settings",
-                FontWeight = System.Windows.FontWeights.Bold,
-                HorizontalAlignment = System.Windows.HorizontalAlignment.Center
-            };
-            
-            var microphoneLabel = new Label
-            {
-                Content = "Microphone Device:"
-            };
-            
-            var microphoneComboBox = new ComboBox
-            {
-                Margin = new System.Windows.Thickness(5),
-                MinWidth = 200
-            };
-            
-            var speakerLabel = new Label
-            {
-                Content = "Speaker Device:"
-            };
-            
-            var speakerComboBox = new ComboBox
-            {
-                Margin = new System.Windows.Thickness(5),
-                MinWidth = 200
-            };
-            
-            var saveButton = new Button
-            {
-                Content = "Save Settings",
-                Margin = new System.Windows.Thickness(5),
-                Padding = new System.Windows.Thickness(10, 5, 10, 5)
-            };
-            
-            stackPanel.Children.Add(titleLabel);
-            stackPanel.Children.Add(microphoneLabel);
-            stackPanel.Children.Add(microphoneComboBox);
-            stackPanel.Children.Add(speakerLabel);
-            stackPanel.Children.Add(speakerComboBox);
-            stackPanel.Children.Add(saveButton);
-            
-            grid.Children.Add(stackPanel);
-            
-            Content = grid;
-        }
     }
 }

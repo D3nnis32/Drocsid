@@ -61,6 +61,10 @@ Content-Type: application/json
   "token": "{{Token}}"
 }
 
+###
+GET http://localhost:5186/api/plugins
+Authorization: Bearer {{token}}
+
 ### Step 2: Login through the Gateway to get token and node assignment
 POST {{registryUrl}}/api/gateway/connect
 Content-Type: application/json

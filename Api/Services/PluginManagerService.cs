@@ -2,7 +2,6 @@ using System.Reflection;
 using System.Security.Cryptography;
 using Drocsid.HenrikDennis2025.PluginContracts.Interfaces;
 using Drocsid.HenrikDennis2025.PluginContracts.Models;
-using System.Windows.Controls;
 
 namespace Drocsid.HenrikDennis2025.Api.Services;
 
@@ -231,10 +230,19 @@ public abstract class PlaceholderPluginBase : IPlugin
         return Task.CompletedTask;
     }
 
-    public virtual object GetSettingsView()
+    public virtual UiComponent GetSettingsView()
     {
-        // Return null since we can't create WPF controls in Linux
-        return null;
+        // Return a platform-agnostic UI component instead of a WPF UserControl
+        return new UiComponent
+        {
+            Id = $"{Id}-settings",
+            ComponentType = "SettingsView",
+            Configuration = "{}",
+            Properties = new Dictionary<string, string>
+            {
+                ["title"] = $"{Name} Settings"
+            }
+        };
     }
 }
 
@@ -252,16 +260,41 @@ public class PlaceholderCommunicationPlugin : PlaceholderPluginBase, ICommunicat
 {
     public IEnumerable<CommunicationMode> SupportedModes => new[] { CommunicationMode.Audio };
 
-    public Task<object> JoinSessionAsync(string sessionId)
+    public Task<UiComponent> JoinSessionAsync(string sessionId)
     {
-        // Return null since we can't create WPF controls in Linux
-        return Task.FromResult<object>(Task.FromResult<UserControl>(null));
+        // Return a platform-agnostic UI component instead of a WPF UserControl
+        var component = new UiComponent
+        {
+            Id = $"{Id}-session-{sessionId}",
+            ComponentType = "CommunicationView",
+            Configuration = $"{{ \"sessionId\": \"{sessionId}\" }}",
+            Properties = new Dictionary<string, string>
+            {
+                ["mode"] = "join",
+                ["plugin"] = Id
+            }
+        };
+        
+        return Task.FromResult(component);
     }
 
-    public Task<object> StartSessionAsync(Guid channelId, CommunicationMode mode)
+    public Task<UiComponent> StartSessionAsync(Guid channelId, CommunicationMode mode)
     {
-        // Return null since we can't create WPF controls in Linux
-        return Task.FromResult<object>(Task.FromResult<UserControl>(null));
+        // Return a platform-agnostic UI component instead of a WPF UserControl
+        var sessionId = Guid.NewGuid().ToString();
+        var component = new UiComponent
+        {
+            Id = $"{Id}-channel-{channelId}",
+            ComponentType = "CommunicationView",
+            Configuration = $"{{ \"channelId\": \"{channelId}\", \"mode\": \"{mode}\", \"sessionId\": \"{sessionId}\" }}",
+            Properties = new Dictionary<string, string>
+            {
+                ["mode"] = "start",
+                ["plugin"] = Id
+            }
+        };
+        
+        return Task.FromResult(component);
     }
 
     public Task EndSessionAsync(string sessionId)
@@ -275,26 +308,45 @@ public class PlaceholderCommunicationPlugin : PlaceholderPluginBase, ICommunicat
 /// </summary>
 public class PlaceholderCollaborationPlugin : PlaceholderPluginBase, ICollaborationPlugin
 {
-    public Task<object> JoinCollaborationAsync(string sessionId)
+    public Task<UiComponent> JoinCollaborationAsync(string sessionId)
     {
-        // Return null since we can't create WPF controls in Linux
-        return Task.FromResult<object>(Task.FromResult<UserControl>(null));
+        // Return a platform-agnostic UI component instead of a WPF UserControl
+        var component = new UiComponent
+        {
+            Id = $"{Id}-collaboration-{sessionId}",
+            ComponentType = "CollaborationView",
+            Configuration = $"{{ \"sessionId\": \"{sessionId}\" }}",
+            Properties = new Dictionary<string, string>
+            {
+                ["mode"] = "join",
+                ["plugin"] = Id
+            }
+        };
+        
+        return Task.FromResult(component);
     }
 
-    public Task<object> StartCollaborationAsync(Guid channelId)
+    public Task<UiComponent> StartCollaborationAsync(Guid channelId)
     {
-        // Return null since we can't create WPF controls in Linux
-        return Task.FromResult<object>(Task.FromResult<UserControl>(null));
+        // Return a platform-agnostic UI component instead of a WPF UserControl
+        var sessionId = Guid.NewGuid().ToString();
+        var component = new UiComponent
+        {
+            Id = $"{Id}-channel-{channelId}",
+            ComponentType = "CollaborationView",
+            Configuration = $"{{ \"channelId\": \"{channelId}\", \"sessionId\": \"{sessionId}\" }}",
+            Properties = new Dictionary<string, string>
+            {
+                ["mode"] = "start",
+                ["plugin"] = Id
+            }
+        };
+        
+        return Task.FromResult(component);
     }
 
     public Task EndCollaborationAsync(string sessionId)
     {
         return Task.CompletedTask;
     }
-}
-
-// Custom exception for security issues
-public class SecurityException : Exception
-{
-    public SecurityException(string message) : base(message) { }
 }

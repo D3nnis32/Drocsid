@@ -1,4 +1,3 @@
-using System.Windows.Controls;
 using Drocsid.HenrikDennis2025.PluginContracts.Models;
 
 namespace Drocsid.HenrikDennis2025.PluginContracts.Interfaces;
@@ -10,7 +9,7 @@ public interface ICommunicationPlugin : IPlugin
 {
     IEnumerable<CommunicationMode> SupportedModes { get; }
         
-    Task<object> StartSessionAsync(Guid channelId, CommunicationMode mode);
-    Task<object> JoinSessionAsync(string sessionId);
+    Task<UiComponent> StartSessionAsync(Guid channelId, CommunicationMode mode);
+    Task<UiComponent> JoinSessionAsync(string sessionId);
     Task EndSessionAsync(string sessionId);
 }

@@ -1,4 +1,5 @@
-using System.Windows.Controls;
+
+using Drocsid.HenrikDennis2025.PluginContracts.Models;
 
 namespace Drocsid.HenrikDennis2025.PluginContracts.Interfaces;
 
@@ -7,7 +8,7 @@ namespace Drocsid.HenrikDennis2025.PluginContracts.Interfaces;
 /// </summary>
 public interface ICollaborationPlugin : IPlugin
 {
-    Task<object> StartCollaborationAsync(Guid channelId);
-    Task<object> JoinCollaborationAsync(string sessionId);
+    Task<UiComponent> StartCollaborationAsync(Guid channelId);
+    Task<UiComponent> JoinCollaborationAsync(string sessionId);
     Task EndCollaborationAsync(string sessionId);
 }

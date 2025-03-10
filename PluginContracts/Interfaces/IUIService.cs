@@ -1,4 +1,3 @@
-using System.Windows.Controls;
 using Drocsid.HenrikDennis2025.PluginContracts.Models;
 
 namespace Drocsid.HenrikDennis2025.PluginContracts.Interfaces;
@@ -11,12 +10,12 @@ public interface IUIService
     /// <summary>
     /// Register a UI component to be shown in the channel header
     /// </summary>
-    void RegisterChannelHeaderComponent(Guid channelId, UserControl component);
+    void RegisterChannelHeaderComponent(Guid channelId, UiComponent component);
         
     /// <summary>
     /// Register a UI component to be shown in the sidebar
     /// </summary>
-    void RegisterSidebarComponent(UserControl component);
+    void RegisterSidebarComponent(UiComponent component);
         
     /// <summary>
     /// Show a notification to the user
@@ -31,5 +30,5 @@ public interface IUIService
     /// <summary>
     /// Show a modal window with plugin content
     /// </summary>
-    Task ShowModalAsync(string title, UserControl content);
+    Task ShowModalAsync(string title, UiComponent content);
 }

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -67,7 +68,7 @@ namespace WhiteboardPlugin
             _context.Logger.Info("Whiteboard Plugin shutdown complete");
         }
 
-        public async Task<UserControl> StartCollaborationAsync(Guid channelId)
+        public async Task<UiComponent> StartCollaborationAsync(Guid channelId)
         {
             _context.Logger.Info($"Starting whiteboard session for channel {channelId}");
             
@@ -90,13 +91,13 @@ namespace WhiteboardPlugin
             // Store the session
             _activeSessions[sessionId] = session;
             
-            // Create and return the UI control
-            var control = new WhiteboardControl(sessionId, _context);
+            // Create and return the UI component
+            var component = CreateWhiteboardComponent(sessionId, session);
             
-            return await Task.FromResult(control);
+            return await Task.FromResult(component);
         }
 
-        public async Task<UserControl> JoinCollaborationAsync(string sessionId)
+        public async Task<UiComponent> JoinCollaborationAsync(string sessionId)
         {
             if (!_activeSessions.TryGetValue(sessionId, out var session))
             {
@@ -111,10 +112,10 @@ namespace WhiteboardPlugin
                 session.Participants.Add(_context.UserSession.CurrentUserId);
             }
             
-            // Create and return the UI control
-            var control = new WhiteboardControl(sessionId, _context);
+            // Create and return the UI component
+            var component = CreateWhiteboardComponent(sessionId, session);
             
-            return await Task.FromResult(control);
+            return await Task.FromResult(component);
         }
 
         public async Task EndCollaborationAsync(string sessionId)
@@ -142,10 +143,24 @@ namespace WhiteboardPlugin
             await Task.CompletedTask;
         }
 
-        public UserControl GetSettingsView()
+        public UiComponent GetSettingsView()
         {
             // Return a settings UI for configuring the whiteboard plugin
-            return new WhiteboardSettings(_context);
+            return new UiComponent
+            {
+                Id = "whiteboard-settings",
+                ComponentType = "WhiteboardSettings",
+                Configuration = @"{
+                    ""defaultStrokeColor"": ""#000000"",
+                    ""defaultStrokeWidth"": 2.0,
+                    ""maxCanvasWidth"": 1200.0,
+                    ""maxCanvasHeight"": 800.0
+                }",
+                Properties = new Dictionary<string, string>
+                {
+                    ["title"] = "Whiteboard Settings"
+                }
+            };
         }
 
         private void OnChannelOpened(object channelInfo)
@@ -218,6 +233,33 @@ namespace WhiteboardPlugin
                     break;
             }
         }
+
+        // Helper method to create a whiteboard UI component
+        private UiComponent CreateWhiteboardComponent(string sessionId, WhiteboardSession session)
+        {
+            // Convert the strokes to a JSON string for the configuration
+            var strokesJson = JsonSerializer.Serialize(session.Strokes);
+            
+            return new UiComponent
+            {
+                Id = $"whiteboard-{sessionId}",
+                ComponentType = "WhiteboardControl",
+                Configuration = $@"{{
+                    ""sessionId"": ""{sessionId}"",
+                    ""channelId"": ""{session.ChannelId}"",
+                    ""currentColor"": ""#000000"",
+                    ""currentThickness"": 2.0,
+                    ""strokes"": {strokesJson},
+                    ""participants"": {JsonSerializer.Serialize(session.Participants)}
+                }}",
+                Properties = new Dictionary<string, string>
+                {
+                    ["title"] = "Shared Whiteboard",
+                    ["width"] = "800",
+                    ["height"] = "600"
+                }
+            };
+        }
     }
 
     /// <summary>
@@ -243,6 +285,21 @@ namespace WhiteboardPlugin
         public string Color { get; set; }
         public double Thickness { get; set; }
         public StrokeType Type { get; set; }
+    }
+
+    /// <summary>
+    /// Represents a 2D point
+    /// </summary>
+    internal class Point
+    {
+        public double X { get; set; }
+        public double Y { get; set; }
+        
+        public Point(double x, double y)
+        {
+            X = x;
+            Y = y;
+        }
     }
 
     /// <summary>
@@ -281,277 +338,5 @@ namespace WhiteboardPlugin
         public Guid UserId { get; set; }
         public WhiteboardStroke Stroke { get; set; }
         public int StrokeIndex { get; set; }
-    }
-
-    /// <summary>
-    /// Simple UI control for whiteboard
-    /// </summary>
-    internal class WhiteboardControl : UserControl
-    {
-        private readonly string _sessionId;
-        private readonly IPluginContext _context;
-        private Canvas _canvas;
-        private Point? _lastPoint;
-        private Polyline _currentStroke;
-        private string _currentColor = "#000000";
-        private double _currentThickness = 2.0;
-        
-        public WhiteboardControl(string sessionId, IPluginContext context)
-        {
-            _sessionId = sessionId;
-            _context = context;
-            
-            // Create the UI for the whiteboard
-            var grid = new Grid();
-            
-            // Main toolbar
-            var toolBar = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                Height = 40,
-                Background = Brushes.LightGray
-            };
-            
-            var clearButton = new Button
-            {
-                Content = "Clear",
-                Margin = new Thickness(5),
-                Padding = new Thickness(10, 5, 10, 5)
-            };
-            clearButton.Click += (s, e) => ClearCanvas();
-            
-            var colorPicker = new ComboBox
-            {
-                Margin = new Thickness(5),
-                Width = 100
-            };
-            colorPicker.Items.Add("Black");
-            colorPicker.Items.Add("Red");
-            colorPicker.Items.Add("Blue");
-            colorPicker.Items.Add("Green");
-            colorPicker.SelectedIndex = 0;
-            colorPicker.SelectionChanged += (s, e) => 
-            {
-                switch (colorPicker.SelectedIndex)
-                {
-                    case 0: _currentColor = "#000000"; break;
-                    case 1: _currentColor = "#FF0000"; break;
-                    case 2: _currentColor = "#0000FF"; break;
-                    case 3: _currentColor = "#00FF00"; break;
-                }
-            };
-            
-            var thicknessSlider = new Slider
-            {
-                Minimum = 1,
-                Maximum = 10,
-                Value = 2,
-                Width = 100,
-                Margin = new Thickness(5)
-            };
-            thicknessSlider.ValueChanged += (s, e) => 
-            {
-                _currentThickness = thicknessSlider.Value;
-            };
-            
-            toolBar.Children.Add(clearButton);
-            toolBar.Children.Add(new Label { Content = "Color:" });
-            toolBar.Children.Add(colorPicker);
-            toolBar.Children.Add(new Label { Content = "Thickness:" });
-            toolBar.Children.Add(thicknessSlider);
-            
-            // Drawing canvas
-            _canvas = new Canvas
-            {
-                Background = Brushes.White,
-                ClipToBounds = true
-            };
-            
-            _canvas.MouseDown += Canvas_MouseDown;
-            _canvas.MouseMove += Canvas_MouseMove;
-            _canvas.MouseUp += Canvas_MouseUp;
-            
-            // Set up the grid
-            Grid.SetRow(toolBar, 0);
-            Grid.SetRow(_canvas, 1);
-            
-            grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(40) });
-            grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-            
-            grid.Children.Add(toolBar);
-            grid.Children.Add(_canvas);
-            
-            Content = grid;
-        }
-
-        private void Canvas_MouseDown(object sender, MouseButtonEventArgs e)
-        {
-            if (e.LeftButton == MouseButtonState.Pressed)
-            {
-                _lastPoint = e.GetPosition(_canvas);
-                
-                // Start a new stroke
-                _currentStroke = new Polyline
-                {
-                    Stroke = (SolidColorBrush)new BrushConverter().ConvertFrom(_currentColor),
-                    StrokeThickness = _currentThickness,
-                    Points = new PointCollection { _lastPoint.Value }
-                };
-                
-                _canvas.Children.Add(_currentStroke);
-            }
-        }
-
-        private void Canvas_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (e.LeftButton == MouseButtonState.Pressed && _lastPoint.HasValue && _currentStroke != null)
-            {
-                var currentPoint = e.GetPosition(_canvas);
-                _currentStroke.Points.Add(currentPoint);
-                _lastPoint = currentPoint;
-            }
-        }
-
-        private void Canvas_MouseUp(object sender, MouseButtonEventArgs e)
-        {
-            if (_currentStroke != null)
-            {
-                // Finalize the stroke and send it to other participants
-                var points = _currentStroke.Points.Select(p => new Point(p.X, p.Y)).ToList();
-                
-                var stroke = new WhiteboardStroke
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = _context.UserSession.CurrentUserId,
-                    Points = points,
-                    Color = _currentColor,
-                    Thickness = _currentThickness,
-                    Type = StrokeType.Freehand
-                };
-                
-                var strokeEvent = new WhiteboardEvent
-                {
-                    SessionId = _sessionId,
-                    EventType = WhiteboardEventType.StrokeAdded,
-                    UserId = _context.UserSession.CurrentUserId,
-                    Stroke = stroke
-                };
-                
-                _context.EventManager.Publish("whiteboard_event", strokeEvent);
-                
-                _currentStroke = null;
-                _lastPoint = null;
-            }
-        }
-
-        private void ClearCanvas()
-        {
-            _canvas.Children.Clear();
-            
-            var clearEvent = new WhiteboardEvent
-            {
-                SessionId = _sessionId,
-                EventType = WhiteboardEventType.CanvasCleared,
-                UserId = _context.UserSession.CurrentUserId
-            };
-            
-            _context.EventManager.Publish("whiteboard_event", clearEvent);
-        }
-    }
-
-    /// <summary>
-    /// Settings UI for whiteboard plugin
-    /// </summary>
-    internal class WhiteboardSettings : UserControl
-    {
-        private readonly IPluginContext _context;
-        
-        public WhiteboardSettings(IPluginContext context)
-        {
-            _context = context;
-            
-            // Create the UI for whiteboard settings
-            var grid = new Grid();
-            
-            var stackPanel = new StackPanel
-            {
-                Orientation = Orientation.Vertical
-            };
-            
-            var titleLabel = new Label
-            {
-                Content = "Whiteboard Settings",
-                FontWeight = FontWeights.Bold,
-                HorizontalAlignment = HorizontalAlignment.Center
-            };
-            
-            var defaultColorLabel = new Label
-            {
-                Content = "Default Stroke Color:"
-            };
-            
-            var defaultColorComboBox = new ComboBox
-            {
-                Margin = new Thickness(5),
-                MinWidth = 200
-            };
-            defaultColorComboBox.Items.Add("Black");
-            defaultColorComboBox.Items.Add("Red");
-            defaultColorComboBox.Items.Add("Blue");
-            defaultColorComboBox.Items.Add("Green");
-            defaultColorComboBox.SelectedIndex = 0;
-            
-            var defaultWidthLabel = new Label
-            {
-                Content = "Default Stroke Width:"
-            };
-            
-            var defaultWidthSlider = new Slider
-            {
-                Minimum = 1,
-                Maximum = 10,
-                Value = 2,
-                Margin = new Thickness(5),
-                MinWidth = 200
-            };
-            
-            var saveButton = new Button
-            {
-                Content = "Save Settings",
-                Margin = new Thickness(5),
-                Padding = new Thickness(10, 5, 10, 5)
-            };
-            
-            saveButton.Click += async (s, e) =>
-            {
-                string colorValue = "#000000";
-                switch (defaultColorComboBox.SelectedIndex)
-                {
-                    case 0: colorValue = "#000000"; break;
-                    case 1: colorValue = "#FF0000"; break;
-                    case 2: colorValue = "#0000FF"; break;
-                    case 3: colorValue = "#00FF00"; break;
-                }
-                
-                _context.Configuration.SetValue("default_stroke_color", colorValue);
-                _context.Configuration.SetValue("default_stroke_width", defaultWidthSlider.Value);
-                
-                await _context.Configuration.SaveAsync();
-                
-                _context.Logger.Info("Whiteboard settings saved");
-                _context.UIService.ShowNotification("Settings Saved", "Whiteboard settings have been saved.", NotificationType.Success);
-            };
-            
-            stackPanel.Children.Add(titleLabel);
-            stackPanel.Children.Add(defaultColorLabel);
-            stackPanel.Children.Add(defaultColorComboBox);
-            stackPanel.Children.Add(defaultWidthLabel);
-            stackPanel.Children.Add(defaultWidthSlider);
-            stackPanel.Children.Add(saveButton);
-            
-            grid.Children.Add(stackPanel);
-            
-            Content = grid;
-        }
     }
 }

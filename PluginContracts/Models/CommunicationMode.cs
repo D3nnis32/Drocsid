@@ -5,7 +5,18 @@ namespace Drocsid.HenrikDennis2025.PluginContracts.Models;
 /// </summary>
 public enum CommunicationMode
 {
-    Text,
+    /// <summary>
+    /// Audio-only communication
+    /// </summary>
     Audio,
-    Video
+        
+    /// <summary>
+    /// Video and audio communication
+    /// </summary>
+    Video,
+        
+    /// <summary>
+    /// Screen sharing
+    /// </summary>
+    ScreenSharing
 }

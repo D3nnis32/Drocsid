@@ -6,6 +6,7 @@ using Drocsid.HenrikDennis2025.Core.Interfaces;
 using Drocsid.HenrikDennis2025.Core.Interfaces.Options;
 using Drocsid.HenrikDennis2025.Core.Interfaces.Services;
 using Drocsid.HenrikDennis2025.Core.Models;
+using Drocsid.HenrikDennis2025.PluginContracts.Interfaces;
 using Infrastructure.Data;
 using Infrastructure.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -50,6 +51,31 @@ builder.Services.Configure<FileTransferOptions>(builder.Configuration.GetSection
 
 // Add FileTransferService
 builder.Services.AddScoped<IFileTransferService, FileTransferService>();
+
+// Add PluginManagerService and its dependencies
+builder.Services.AddSingleton<PluginManagerService>();
+builder.Services.AddSingleton<IPluginContext, DefaultPluginContext>();
+builder.Services.AddSingleton<IPluginConfiguration, DefaultPluginConfiguration>();
+builder.Services.AddSingleton<IPluginLogger>(provider => 
+{
+    var logger = provider.GetRequiredService<ILogger<DefaultPluginLogger>>();
+    return new DefaultPluginLogger(logger, "System");
+});
+builder.Services.AddSingleton<IPluginEventManager, DefaultPluginEventManager>();
+builder.Services.AddSingleton<IUIService, DefaultUIService>();
+builder.Services.AddSingleton<IUserSessionService>(provider =>
+{
+    var logger = provider.GetRequiredService<ILogger<DefaultUserSessionService>>();
+    // Use a system-level service account for the plugin system
+    // In a real app, this would be connected to the current user's session
+    return new DefaultUserSessionService(
+        logger,
+        Guid.Empty, // System user ID
+        "System",
+        "dummy-token",
+        builder.Configuration["NodeApiEndpoint"] ?? "http://localhost:5186"
+    );
+});
 
 // Configure JWT authentication
 var jwtKey = builder.Configuration["Jwt:Key"];
@@ -191,6 +217,13 @@ if (!Directory.Exists(storagePath))
     Directory.CreateDirectory(storagePath);
     // Create temp uploads directory
     Directory.CreateDirectory(Path.Combine(storagePath, "temp"));
+}
+
+// Ensure plugins directory exists
+var pluginsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Plugins");
+if (!Directory.Exists(pluginsDir))
+{
+    Directory.CreateDirectory(pluginsDir);
 }
 
 // Register this node with the registry service if configured

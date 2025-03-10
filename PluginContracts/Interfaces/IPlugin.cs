@@ -1,5 +1,4 @@
-using System.Windows.Controls;
-using System.Windows.Media;
+
 using Drocsid.HenrikDennis2025.PluginContracts.Models;
 
 namespace Drocsid.HenrikDennis2025.PluginContracts.Interfaces;
@@ -19,5 +18,5 @@ public interface IPlugin
         
     Task InitializeAsync(IPluginContext context);
     Task ShutdownAsync();
-    object GetSettingsView();
+    UiComponent GetSettingsView();
 }
