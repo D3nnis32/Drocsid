@@ -5,12 +5,15 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using System.Windows;
+using Drocsid.HenrikDennis2025.Core.Models;
+using Drocsid.HenrikDennis2025.Core.Services;
 
 namespace Logic.UI.ViewModels
 {
     public class LoginUserControlViewModel : INotifyPropertyChanged
     {
         private readonly HttpClient _httpClient;
+        private readonly DrocsidClientService _drocsidClient;
         private string _userName;
         private string _password;
         private bool _isLoggingIn;
@@ -72,6 +75,10 @@ namespace Logic.UI.ViewModels
         public LoginUserControlViewModel()
         {
             _httpClient = new HttpClient { BaseAddress = new Uri("http://localhost:5261/") };
+            
+            // Initialize the DrocsidClientService
+            _drocsidClient = ServiceLocator.DrocsidClient;
+            
             LoginCommand = new RelayCommand(
                 execute: Login,
                 canExecute: () => !string.IsNullOrWhiteSpace(UserName) &&
@@ -108,14 +115,24 @@ namespace Logic.UI.ViewModels
 
                 if (response.IsSuccessStatusCode)
                 {
-                    var loginResponse = await response.Content.ReadFromJsonAsync<LoginResponse>();
+                    var connectionInfo = await response.Content.ReadFromJsonAsync<ConnectionInfo>();
 
-                    // Store the token and user info
-                    TokenStorage.JwtToken = loginResponse.Token;
-                    TokenStorage.UserId = loginResponse.UserId;
-                    TokenStorage.Username = loginResponse.Username;
+                    // Store the connection information in TokenStorage
+                    TokenStorage.StoreConnectionInfo(
+                        connectionInfo.Token,
+                        connectionInfo.UserId,
+                        connectionInfo.Username,
+                        connectionInfo.NodeEndpoint,
+                        connectionInfo.RegistryEndpoint,
+                        connectionInfo.ExpiresAt
+                    );
 
-                    Console.WriteLine($"DEBUG: Login successful for user: {loginResponse.Username}");
+                    Console.WriteLine($"DEBUG: Login successful for user: {connectionInfo.Username}");
+                    Console.WriteLine($"DEBUG: Assigned to node: {connectionInfo.NodeEndpoint}");
+                    Console.WriteLine($"DEBUG: Registry endpoint: {connectionInfo.RegistryEndpoint}");
+
+                    // Configure the DrocsidClient with the connection info
+                    _drocsidClient.Configure(connectionInfo.RegistryEndpoint, connectionInfo.NodeEndpoint);
 
                     // Notify subscribers about successful login
                     LoginSuccessful?.Invoke(this, EventArgs.Empty);

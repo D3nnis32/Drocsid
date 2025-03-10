@@ -21,6 +21,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Api", "Api\Api.csproj", "{4
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RegistryService", "RegistryService\RegistryService.csproj", "{8F7CD2A4-1E6D-414B-AADE-8BC9C1E423B2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VoiceChatPlugin", "VoiceChatPlugin\VoiceChatPlugin.csproj", "{6580CE2A-FA9D-4E1E-AC97-CA44F1D13CF2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WhiteboardPlugin", "WhiteboardPlugin\WhiteboardPlugin.csproj", "{68D07309-BED4-470E-9715-9DF74CF33622}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -59,6 +63,14 @@ Global
 		{8F7CD2A4-1E6D-414B-AADE-8BC9C1E423B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8F7CD2A4-1E6D-414B-AADE-8BC9C1E423B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8F7CD2A4-1E6D-414B-AADE-8BC9C1E423B2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6580CE2A-FA9D-4E1E-AC97-CA44F1D13CF2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6580CE2A-FA9D-4E1E-AC97-CA44F1D13CF2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6580CE2A-FA9D-4E1E-AC97-CA44F1D13CF2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6580CE2A-FA9D-4E1E-AC97-CA44F1D13CF2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{68D07309-BED4-470E-9715-9DF74CF33622}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{68D07309-BED4-470E-9715-9DF74CF33622}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{68D07309-BED4-470E-9715-9DF74CF33622}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{68D07309-BED4-470E-9715-9DF74CF33622}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

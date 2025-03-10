@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0-windows</TargetFramework>
+        <Nullable>enable</Nullable>
+        <UseWPF>true</UseWPF>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\PluginContracts\PluginContracts.csproj" />
+    </ItemGroup>
+
+    <Target Name="CopyDependencies" AfterTargets="Build">
+        <ItemGroup>
+            <DependencyFiles Include="$(OutDir)*.dll" Exclude="$(OutDir)$(AssemblyName).dll" />
+        </ItemGroup>
+        <Copy SourceFiles="@(DependencyFiles)" DestinationFolder="$(OutDir)" />
+    </Target>
+
+</Project>

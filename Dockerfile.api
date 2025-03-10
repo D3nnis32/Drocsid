@@ -8,15 +8,26 @@ WORKDIR /src
 COPY ["Api/Api.csproj", "Api/"]
 COPY ["Core/Core.csproj", "Core/"]
 COPY ["Infrastructure/Infrastructure.csproj", "Infrastructure/"]
+COPY ["PluginContracts/PluginContracts.csproj", "PluginContracts/"]
+
 RUN dotnet restore "Api/Api.csproj"
+
 COPY . .
 WORKDIR "/src/Api"
 RUN dotnet build "Api.csproj" -c Release -o /app/build
 
 FROM build AS publish
+WORKDIR "/src/Api"
 RUN dotnet publish "Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+
+# Ensure the Plugins directory exists but don't copy any plugins
+RUN mkdir -p /app/Plugins
+
+# Make sure the directory is writable by the container user
+RUN chmod 777 /app/Plugins
+
 ENTRYPOINT ["dotnet", "Api.dll"]

@@ -10,7 +10,7 @@ if not "%1"=="" set NUM_NODES=%1
 echo Building Docker images...
 :: Build the registry service image
 docker build -t drocsid-registry -f Dockerfile.registry .
-:: Build the API image
+:: Build the API image (now includes plugin building)
 docker build -t drocsid-api -f Dockerfile.api .
 echo Docker images built successfully!
 
@@ -64,3 +64,9 @@ echo Deployment complete!
 echo You can access the registry service at http://localhost:5261
 echo API nodes are accessible at ports starting from 5186
 echo Total nodes deployed: %NUM_NODES%
+
+echo.
+echo To test if plugins are properly loaded, try these API endpoints:
+echo - http://localhost:5186/api/plugins (for a list of all available plugins)
+echo - http://localhost:5186/api/plugins/channel/{channelId}/communication (for voice chat plugin)
+echo - http://localhost:5186/api/plugins/channel/{channelId}/collaboration (for whiteboard plugin)
