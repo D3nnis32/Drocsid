@@ -16,6 +16,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 using Logic.UI.ViewModels.Services;
+using FileInfo = System.IO.FileInfo;
 
 namespace Logic.UI.ViewModels
 {
@@ -551,7 +552,12 @@ namespace Logic.UI.ViewModels
                     var attachment = await UploadFileAsync(pendingAttachment.FilePath);
                     if (attachment != null)
                     {
+                        Console.WriteLine($"DEBUG: Successfully uploaded attachment: {attachment.Id}, {attachment.Filename}");
                         attachmentIds.Add(attachment.Id);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"DEBUG: Failed to upload attachment: {pendingAttachment.Filename}");
                     }
                 }
 
@@ -562,12 +568,27 @@ namespace Logic.UI.ViewModels
                     AttachmentIds = attachmentIds
                 };
 
+                Console.WriteLine($"DEBUG: Sending message with {attachmentIds.Count} attachments");
+
                 var response = await _httpClient.PostAsJsonAsync($"api/channels/{_channel.Id}/messages", request);
 
                 if (response.IsSuccessStatusCode)
                 {
                     var message = await response.Content.ReadFromJsonAsync<Message>();
-                    Messages.Add(message);
+                    Console.WriteLine($"DEBUG: Message created successfully with {message?.Attachments?.Count ?? 0} attachments");
+                    
+                    // Ensure we have the attachments included
+                    if (message != null)
+                    {
+                        if (message.Attachments == null)
+                        {
+                            message.Attachments = new List<Attachment>();
+                        }
+                        
+                        // Add the message to the list
+                        Messages.Add(message);
+                    }
+                    
                     MessageText = string.Empty; // Clear the input
                     PendingAttachments.Clear(); // Clear attachments
                 }
@@ -599,7 +620,14 @@ namespace Logic.UI.ViewModels
                     return null;
                 }
 
-                var fileBytes = await File.ReadAllBytesAsync(filePath);
+                var fileInfo = new FileInfo(filePath);
+                
+                if (!fileInfo.Exists)
+                {
+                    Console.WriteLine($"DEBUG: File does not exist: {filePath}");
+                    return null;
+                }
+                
                 var fileName = Path.GetFileName(filePath);
 
                 if (string.IsNullOrWhiteSpace(fileName))
@@ -608,33 +636,42 @@ namespace Logic.UI.ViewModels
                     return null;
                 }
 
+                // Create multipart form content
                 using var multipartContent = new MultipartFormDataContent();
-                using var fileContent = new ByteArrayContent(fileBytes);
-
+                
+                // Create stream content directly from file stream
+                using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+                using var fileContent = new StreamContent(fileStream);
+                
                 fileContent.Headers.ContentType = new MediaTypeHeaderValue(GetMimeTypeFromFileName(fileName));
                 multipartContent.Add(fileContent, "file", fileName);
 
-                Console.WriteLine($"DEBUG: Sending file {fileName} with size {fileBytes.Length}");
+                Console.WriteLine($"DEBUG: Sending file {fileName} with size {fileInfo.Length}");
 
                 var response = await _httpClient.PostAsync("api/files", multipartContent);
-                var errorContent = await response.Content.ReadAsStringAsync();
-
-                Console.WriteLine($"DEBUG: Upload response status: {response.StatusCode}, Content: {errorContent}");
+                
+                Console.WriteLine($"DEBUG: Upload response status: {response.StatusCode}");
 
                 if (response.IsSuccessStatusCode)
                 {
-                    return await response.Content.ReadFromJsonAsync<Attachment>();
+                    var attachment = await response.Content.ReadFromJsonAsync<Attachment>();
+                    Console.WriteLine($"DEBUG: File uploaded successfully. ID: {attachment?.Id}, Name: {attachment?.Filename}");
+                    return attachment;
                 }
-
-                return null;
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"DEBUG: Upload failed. Status: {response.StatusCode}, Error: {errorContent}");
+                    return null;
+                }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"DEBUG: Exception uploading file: {ex.Message}");
+                Console.WriteLine($"DEBUG: Stack trace: {ex.StackTrace}");
                 return null;
             }
         }
-
 
         private string GetMimeTypeFromFileName(string fileName)
         {
@@ -679,40 +716,53 @@ namespace Logic.UI.ViewModels
                 if (response.IsSuccessStatusCode)
                 {
                     var messages = await response.Content.ReadFromJsonAsync<Message[]>();
-                    Console.WriteLine($"DEBUG: Loaded {messages.Length} messages.");
+                    Console.WriteLine($"DEBUG: Loaded {messages?.Length ?? 0} messages.");
 
-                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    // Check the messages for debugging purposes
+                    if (messages != null)
                     {
-                        Messages.Clear();
                         foreach (var message in messages)
                         {
                             if (message.Attachments != null && message.Attachments.Any())
                             {
-                                Console.WriteLine(
-                                    $"DEBUG: Message {message.Id} has {message.Attachments.Count} attachments");
+                                Console.WriteLine($"DEBUG: Message {message.Id} has {message.Attachments.Count} attachments");
                                 foreach (var attachment in message.Attachments)
                                 {
-                                    Console.WriteLine(
-                                        $"DEBUG: Attachment ID: {attachment.Id}, Filename: {attachment.Filename ?? "null"}");
+                                    Console.WriteLine($"DEBUG: Attachment ID: {attachment.Id}, Filename: {attachment.Filename ?? "null"}, Path: {attachment.Path ?? "null"}");
                                 }
                             }
                             else
                             {
                                 Console.WriteLine($"DEBUG: Message {message.Id} has no attachments");
+                                // Initialize attachments collection if it's null
+                                message.Attachments = new List<Attachment>();
                             }
+                        }
+                    }
 
-                            Messages.Add(message);
+                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        Messages.Clear();
+                        if (messages != null)
+                        {
+                            foreach (var message in messages)
+                            {
+                                Messages.Add(message);
+                            }
                         }
                     });
                 }
                 else
                 {
                     Console.WriteLine($"DEBUG: Failed to fetch messages. Status: {response.StatusCode}");
+                    var content = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"DEBUG: Response content: {content}");
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"DEBUG: Exception fetching messages: {ex.Message}");
+                Console.WriteLine($"DEBUG: Stack trace: {ex.StackTrace}");
             }
         }
 
