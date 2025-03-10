@@ -3,6 +3,7 @@ using Drocsid.HenrikDennis2025.Core.Interfaces;
 using Drocsid.HenrikDennis2025.Core.Interfaces.Options;
 using Drocsid.HenrikDennis2025.Core.Interfaces.Services;
 using Drocsid.HenrikDennis2025.RegistryService;
+using Drocsid.HenrikDennis2025.RegistryService.Controllers;
 using Drocsid.HenrikDennis2025.RegistryService.Services;
 using Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc.Controllers;
@@ -83,6 +84,18 @@ builder.Services.AddScoped<IFileTransferService, FileTransferService>();
 // Add the hosted service that will create scoped instances of INodeHealthMonitor
 builder.Services.AddHostedService<BackgroundServiceHost<INodeHealthMonitor, NodeHealthMonitor>>();
 builder.Services.AddHostedService<DatabaseIntegrationTestService>();
+builder.Services.AddControllers()
+    .AddApplicationPart(typeof(NodeReassignmentController).Assembly);
+
+// Register the improved node health monitor instead of the original one
+builder.Services.AddScoped<INodeHealthMonitor, ImprovedNodeHealthMonitor>();
+
+// Register required loggers
+builder.Services.AddScoped<ILogger<EnhancedNodeHealthChecker>, Logger<EnhancedNodeHealthChecker>>();
+builder.Services.AddScoped<ILogger<ImprovedNodeHealthMonitor>, Logger<ImprovedNodeHealthMonitor>>();
+
+// Adjust the background service to use improved monitor
+builder.Services.AddHostedService<BackgroundServiceHost<INodeHealthMonitor, ImprovedNodeHealthMonitor>>();
 
 // Add HttpClient factory
 builder.Services.AddHttpClient();
