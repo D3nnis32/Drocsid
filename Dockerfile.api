@@ -9,12 +9,25 @@ COPY ["Api/Api.csproj", "Api/"]
 COPY ["Core/Core.csproj", "Core/"]
 COPY ["Infrastructure/Infrastructure.csproj", "Infrastructure/"]
 COPY ["PluginContracts/PluginContracts.csproj", "PluginContracts/"]
+COPY ["VoiceChatPlugin/VoiceChatPlugin.csproj", "VoiceChatPlugin/"]
+COPY ["WhiteboardPlugin/WhiteboardPlugin.csproj", "WhiteboardPlugin/"]
 
 RUN dotnet restore "Api/Api.csproj"
+RUN dotnet restore "VoiceChatPlugin/VoiceChatPlugin.csproj"
+RUN dotnet restore "WhiteboardPlugin/WhiteboardPlugin.csproj"
 
 COPY . .
 WORKDIR "/src/Api"
 RUN dotnet build "Api.csproj" -c Release -o /app/build
+
+# Build the plugins
+WORKDIR "/src/VoiceChatPlugin"
+RUN dotnet build "VoiceChatPlugin.csproj" -c Release
+
+WORKDIR "/src/WhiteboardPlugin"
+RUN dotnet build "WhiteboardPlugin.csproj" -c Release
+
+WORKDIR "/src"
 
 FROM build AS publish
 WORKDIR "/src/Api"
@@ -24,12 +37,13 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
-# Ensure the Plugins directory exists but don't copy any plugins
+# Ensure the Plugins directory exists
 RUN mkdir -p /app/Plugins
 
 # Make sure the directory is writable by the container user
 RUN chmod 777 /app/Plugins
 
+# Copy the plugin DLLs
 COPY --from=build /src/VoiceChatPlugin/bin/Release/net8.0-windows/VoiceChatPlugin.dll /app/Plugins/
 COPY --from=build /src/WhiteboardPlugin/bin/Release/net8.0-windows/WhiteboardPlugin.dll /app/Plugins/
 

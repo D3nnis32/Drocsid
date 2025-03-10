@@ -1,5 +1,15 @@
 # Instructions
 
+### Build Plugins dlls
+
+``
+dotnet build WhiteboardPlugin/WhiteboardPlugin.csproj -c Release
+``
+
+``
+dotnet build VoiceChatPlugin/VoiceChatPlugin.csproj -c Release
+``
+
 ### First Run
 
 ``
