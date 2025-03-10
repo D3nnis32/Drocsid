@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:UI"
              xmlns:converters="clr-namespace:UI.Converters"
-             xmlns:viewmodels="clr-namespace:Logic.UI.ViewModels;assembly=Logic.UI" xmlns:local1="clr-namespace:UI.Converters"
+             xmlns:viewmodels="clr-namespace:Logic.UI.ViewModels;assembly=Logic.UI"
              d:DataContext="{d:DesignInstance Type=viewmodels:ChatViewModel}"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
@@ -13,11 +13,13 @@
         <!-- Define converters specific to this view -->
         <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
         <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
     </UserControl.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="50"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="60"/>
         </Grid.RowDefinitions>
 
@@ -75,7 +77,7 @@
                                                Foreground="#9CDCFE" 
                                                FontWeight="Bold"/>
                                     <TextBlock Text=" • " Foreground="Gray"/>
-                                    <TextBlock Text="{Binding Timestamp, StringFormat=\{0:MM/dd/yyyy HH:mm\}}" 
+                                    <TextBlock Text="{Binding SentAt, StringFormat=\{0:MM/dd/yyyy HH:mm\}}" 
                                                Foreground="Gray" 
                                                FontSize="11" 
                                                VerticalAlignment="Center"/>
@@ -98,7 +100,7 @@
                                                     Margin="0,2" 
                                                     Padding="5" 
                                                     CornerRadius="3">
-                                                <TextBlock Text="{Binding Filename}" 
+                                                <TextBlock Text="{Binding FileName}" 
                                                            Foreground="#569CD6"/>
                                             </Border>
                                         </DataTemplate>
@@ -111,34 +113,99 @@
             </ItemsControl>
         </ScrollViewer>
 
+        <!-- Pending Attachments Section -->
+        <Border Grid.Row="2" 
+                Background="#232628" 
+                Visibility="{Binding PendingAttachments.Count, Converter={StaticResource CountToVisibilityConverter}}">
+            <ItemsControl ItemsSource="{Binding PendingAttachments}" 
+                          Margin="10,5">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="#2D2D2D" 
+                                Margin="0,2,5,2" 
+                                Padding="8,4" 
+                                CornerRadius="3">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Filename}" 
+                                               Foreground="#569CD6" 
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text=" (" 
+                                               Foreground="Gray" 
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding DisplaySize}" 
+                                               Foreground="Gray" 
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text=")" 
+                                               Foreground="Gray" 
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" 
+                                        Content="×" 
+                                        Foreground="#FF6B6B" 
+                                        Background="Transparent" 
+                                        BorderThickness="0" 
+                                        Margin="8,0,0,0" 
+                                        Padding="4,0" 
+                                        FontWeight="Bold"
+                                        Command="{Binding DataContext.RemoveAttachmentCommand, 
+                                                  RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                        CommandParameter="{Binding}"/>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Border>
+
         <!-- Message Input Area -->
-        <Grid Grid.Row="2" Background="#2D2D2D">
+        <Grid Grid.Row="3" Background="#2D2D2D">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="90*"/>
+                <ColumnDefinition Width="91*"/>
+                <ColumnDefinition Width="499*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <!-- Attachment Button -->
             <Button Grid.Column="0" 
-                    Margin="10,0,0,0" 
+                    Margin="10,10,0,10" 
                     Width="40" 
                     Height="40"
                     Background="Transparent" 
-                    BorderThickness="0">
-                <TextBlock Text="+" 
-                           FontSize="24" 
-                           Foreground="White" 
-                           HorizontalAlignment="Center" 
-                           VerticalAlignment="Center"/>
+                    BorderThickness="0"
+                    Command="{Binding AddAttachmentCommand}"
+                    ToolTip="Add attachment">
+                <Grid>
+                    <TextBlock Text="+" 
+                               FontSize="24" 
+                               Foreground="White" 
+                               HorizontalAlignment="Center" 
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text="📎" 
+                               FontSize="18" 
+                               Foreground="White" 
+                               HorizontalAlignment="Center" 
+                               VerticalAlignment="Center"/>
+                </Grid>
             </Button>
 
             <!-- Message Text Input -->
             <Border Grid.Column="1" 
                     Background="#3E3E3E" 
                     CornerRadius="5" 
-                    Margin="10,10" 
-                    Padding="10,5">
+                    Margin="10,10,10,10" 
+                    Padding="10,5" Grid.ColumnSpan="3">
                 <TextBox Text="{Binding MessageText, UpdateSourceTrigger=PropertyChanged}" 
                          Background="Transparent" 
                          BorderThickness="0" 
@@ -151,9 +218,9 @@
             </Border>
 
             <!-- Send Button -->
-            <Button Grid.Column="2" 
+            <Button Grid.Column="4" 
                     Command="{Binding SendMessageCommand}" 
-                    Margin="0,0,10,0" 
+                    Margin="0,10,10,10" 
                     Width="60" 
                     Height="40"
                     Background="#7289DA" 
@@ -177,6 +244,22 @@
             <TextBlock Text="{Binding ErrorMessage}" 
                        Foreground="White" 
                        TextWrapping="Wrap"/>
+        </Border>
+
+        <!-- Loading Indicator -->
+        <Border Grid.Row="1" 
+                Background="#7F000000" 
+                Visibility="{Binding IsSending, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel HorizontalAlignment="Center" 
+                        VerticalAlignment="Center">
+                <TextBlock Text="Sending..." 
+                           Foreground="White" 
+                           HorizontalAlignment="Center"/>
+                <ProgressBar IsIndeterminate="True" 
+                             Width="150" 
+                             Height="5" 
+                             Margin="0,10,0,0"/>
+            </StackPanel>
         </Border>
     </Grid>
 </UserControl>

@@ -62,7 +62,7 @@
                   ItemsSource="{Binding AvailableChannelTypes}" 
                   SelectedItem="{Binding ChannelType}" 
                   Background="#3E3E3E" 
-                  Foreground="White" 
+                  Foreground="#3E3E3E"
                   Margin="0,0,0,15"/>
 
         <!-- Error Message -->

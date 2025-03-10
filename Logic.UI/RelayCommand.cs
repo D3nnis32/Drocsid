@@ -63,4 +63,41 @@ namespace Logic.UI.ViewModels
             System.Windows.Input.CommandManager.InvalidateRequerySuggested();
         }
     }
+
+    // Generic version for strongly-typed parameters
+    public class RelayCommand<T> : ICommand
+    {
+        private readonly Action<T> _execute;
+        private readonly Func<T, bool> _canExecute;
+
+        public RelayCommand(Action<T> execute, Func<T, bool> canExecute = null)
+        {
+            _execute = execute ?? throw new ArgumentNullException(nameof(execute));
+            _canExecute = canExecute;
+        }
+
+        public bool CanExecute(object parameter)
+        {
+            if (parameter == null && typeof(T).IsValueType)
+                return false;
+
+            return _canExecute == null || _canExecute((T)parameter);
+        }
+
+        public void Execute(object parameter)
+        {
+            _execute((T)parameter);
+        }
+
+        public event EventHandler CanExecuteChanged
+        {
+            add { System.Windows.Input.CommandManager.RequerySuggested += value; }
+            remove { System.Windows.Input.CommandManager.RequerySuggested -= value; }
+        }
+
+        public void InvalidateCanExecute()
+        {
+            System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+        }
+    }
 }

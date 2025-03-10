@@ -6,15 +6,15 @@ namespace UI
 {
     public partial class ChatInterfaceUserControl : UserControl
     {
+        private bool _eventSubscribed = false;
+
         public ChatInterfaceUserControl()
         {
             InitializeComponent();
 
-            // Subscribe to the view model's events
-            if (DataContext is ChatInterfaceUserControlViewModel viewModel)
-            {
-                viewModel.RequestOpenNewChannelWindow += ViewModel_RequestOpenNewChannelWindow;
-            }
+            // Only use DataContextChanged for subscription management
+            // Remove the Loaded event handler
+            DataContextChanged += UserControl_DataContextChanged;
         }
 
         private void ViewModel_RequestOpenNewChannelWindow(object sender, ChatInterfaceUserControlViewModel.OpenNewChannelWindowEventArgs e)
@@ -31,21 +31,23 @@ namespace UI
 
             // Set the data context and show the window
             window.DataContext = viewModel;
-            window.Owner = System.Windows.Window.GetWindow(this); // Set the owner window
+            window.Owner = Window.GetWindow(this); // Set the owner window
             window.ShowDialog(); // Show as dialog to block interaction with the main window
         }
 
-        private void UserControl_DataContextChanged(object sender, System.Windows.DependencyPropertyChangedEventArgs e)
+        private void UserControl_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
             // When the DataContext changes, we need to resubscribe to events
             if (e.OldValue is ChatInterfaceUserControlViewModel oldViewModel)
             {
                 oldViewModel.RequestOpenNewChannelWindow -= ViewModel_RequestOpenNewChannelWindow;
+                _eventSubscribed = false;
             }
 
-            if (e.NewValue is ChatInterfaceUserControlViewModel newViewModel)
+            if (e.NewValue is ChatInterfaceUserControlViewModel newViewModel && !_eventSubscribed)
             {
                 newViewModel.RequestOpenNewChannelWindow += ViewModel_RequestOpenNewChannelWindow;
+                _eventSubscribed = true;
             }
         }
     }

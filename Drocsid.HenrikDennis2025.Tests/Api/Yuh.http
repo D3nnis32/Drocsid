@@ -80,7 +80,7 @@ Content-Type: application/json
 %}
 
 ### Step 4: Verify the token with the second storage node (this syncs the user to node2)
-POST {{nodeUrl}}/api/auth/verify-token
+POST http://localhost:5186/api/auth/verify-token
 Content-Type: application/json
 
 {
