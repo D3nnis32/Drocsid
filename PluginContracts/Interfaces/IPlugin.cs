@@ -47,7 +47,7 @@ public interface IPlugin
     /// <summary>
     /// Gets the plugin's icon to display in the UI
     /// </summary>
-    System.Windows.Media.ImageSource Icon { get; }
+    //System.Windows.Media.ImageSource Icon { get; }
         
     /// <summary>
     /// Called when the plugin is loaded

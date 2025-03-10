@@ -16,8 +16,4 @@
       <PackageReference Include="PresentationFramework" Version="4.6.0" />
     </ItemGroup>
 
-    <ItemGroup>
-        <PackageReference Include="PresentationCore" Version="4.6.0" />
-        <PackageReference Include="WindowsBase" Version="4.6.0" />
-    </ItemGroup>
 </Project>
