@@ -11,11 +11,15 @@ public class PluginManagerService
     private readonly Dictionary<string, IPlugin> _loadedPlugins = new();
     private readonly Dictionary<string, string> _verifiedPluginHashes = new();
     private readonly IPluginContext _pluginContext;
+    private readonly string _pluginsDirectory;
 
     public PluginManagerService(ILogger<PluginManagerService> logger, IPluginContext pluginContext)
     {
         _logger = logger;
         _pluginContext = pluginContext;
+        
+        // Set the plugins directory
+        _pluginsDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Plugins");
         
         // Initialize with trusted plugin hashes
         InitializeVerifiedPluginHashes();
@@ -27,6 +31,77 @@ public class PluginManagerService
         // These are placeholder hashes that will be replaced with actual hashes when plugins are compiled
         _verifiedPluginHashes.Add("VoiceChatPlugin", "PLACEHOLDER_HASH_FOR_VOICE_CHAT_PLUGIN");
         _verifiedPluginHashes.Add("WhiteboardPlugin", "PLACEHOLDER_HASH_FOR_WHITEBOARD_PLUGIN");
+    }
+
+    /// <summary>
+    /// Get all available plugin files from the plugins directory
+    /// </summary>
+    public IEnumerable<PluginFileInfo> GetAvailablePluginFiles()
+    {
+        List<PluginFileInfo> availablePlugins = new List<PluginFileInfo>();
+        
+        try
+        {
+            // Ensure plugins directory exists
+            if (!Directory.Exists(_pluginsDirectory))
+            {
+                _logger.LogWarning($"Plugins directory not found: {_pluginsDirectory}");
+                return availablePlugins;
+            }
+
+            // Get all DLL files in the plugins directory
+            string[] pluginFiles = Directory.GetFiles(_pluginsDirectory, "*.dll");
+            
+            foreach (string pluginPath in pluginFiles)
+            {
+                try
+                {
+                    string fileName = Path.GetFileName(pluginPath);
+                    string pluginName = Path.GetFileNameWithoutExtension(pluginPath);
+                    
+                    // Check if plugin is already loaded
+                    bool isLoaded = _loadedPlugins.ContainsKey(pluginName.ToLowerInvariant());
+                    
+                    // Determine plugin type (communication or collaboration) based on filename
+                    string pluginType = "General";
+                    if (pluginName.Contains("Voice") || pluginName.Contains("Chat"))
+                    {
+                        pluginType = "Communication";
+                    }
+                    else if (pluginName.Contains("Whiteboard") || pluginName.Contains("Collab"))
+                    {
+                        pluginType = "Collaboration";
+                    }
+                    
+                    // Calculate hash for security verification
+                    string pluginHash = CalculateFileHash(pluginPath);
+                    
+                    // Create plugin file info
+                    var pluginInfo = new PluginFileInfo
+                    {
+                        FileName = fileName,
+                        Name = FormatPluginName(pluginName),
+                        FilePath = pluginPath,
+                        IsLoaded = isLoaded,
+                        Type = pluginType,
+                        Hash = pluginHash
+                    };
+                    
+                    availablePlugins.Add(pluginInfo);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Error processing plugin file: {pluginPath}");
+                }
+            }
+            
+            return availablePlugins;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error scanning plugins directory: {_pluginsDirectory}");
+            return availablePlugins;
+        }
     }
 
     /// <summary>
@@ -59,6 +134,14 @@ public class PluginManagerService
             string pluginTypeName = Path.GetFileNameWithoutExtension(pluginPath);
             _logger.LogInformation($"Loading plugin: {pluginTypeName}");
             
+            // Check if plugin is already loaded
+            string pluginId = pluginTypeName.ToLowerInvariant();
+            if (_loadedPlugins.ContainsKey(pluginId))
+            {
+                _logger.LogInformation($"Plugin already loaded: {pluginTypeName}");
+                return _loadedPlugins[pluginId];
+            }
+            
             // Determine plugin type (communication or collaboration)
             bool isCommunication = pluginTypeName.Contains("Voice") || pluginTypeName.Contains("Chat");
             bool isCollaboration = pluginTypeName.Contains("Whiteboard") || pluginTypeName.Contains("Collab");
@@ -69,7 +152,7 @@ public class PluginManagerService
             {
                 var commPlugin = new PlaceholderCommunicationPlugin
                 {
-                    Id = pluginTypeName.ToLowerInvariant(),
+                    Id = pluginId,
                     Name = FormatPluginName(pluginTypeName),
                     Description = $"Communication plugin for {FormatPluginName(pluginTypeName)}",
                     Version = new Version(1, 0, 0),
@@ -81,7 +164,7 @@ public class PluginManagerService
             {
                 var collabPlugin = new PlaceholderCollaborationPlugin
                 {
-                    Id = pluginTypeName.ToLowerInvariant(),
+                    Id = pluginId,
                     Name = FormatPluginName(pluginTypeName),
                     Description = $"Collaboration plugin for {FormatPluginName(pluginTypeName)}",
                     Version = new Version(1, 0, 0),
@@ -94,7 +177,7 @@ public class PluginManagerService
                 // General plugin
                 plugin = new PlaceholderGeneralPlugin
                 {
-                    Id = pluginTypeName.ToLowerInvariant(),
+                    Id = pluginId,
                     Name = FormatPluginName(pluginTypeName),
                     Description = $"Plugin for {FormatPluginName(pluginTypeName)}",
                     Version = new Version(1, 0, 0),
@@ -201,6 +284,19 @@ public class PluginManagerService
         
         return formatted;
     }
+}
+
+/// <summary>
+/// Information about an available plugin file
+/// </summary>
+public class PluginFileInfo
+{
+    public string FileName { get; set; }
+    public string Name { get; set; }
+    public string FilePath { get; set; }
+    public bool IsLoaded { get; set; }
+    public string Type { get; set; }
+    public string Hash { get; set; }
 }
 
 // ==================== Placeholder Plugin Classes ====================

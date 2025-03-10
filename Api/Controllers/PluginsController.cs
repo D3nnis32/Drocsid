@@ -7,256 +7,342 @@ using Microsoft.AspNetCore.Mvc;
 namespace Drocsid.HenrikDennis2025.Api.Controllers;
 
 /// <summary>
-    /// Controller for managing plugins
-    /// </summary>
-    [ApiController]
-    [Route("api/[controller]")]
-    [Authorize]
-    public class PluginsController : BaseController
+/// Controller for managing plugins
+/// </summary>
+[ApiController]
+[Route("api/[controller]")]
+[Authorize]
+public class PluginsController : BaseController
+{
+    private readonly PluginManagerService _pluginManager;
+    private readonly ILogger<PluginsController> _logger;
+
+    public PluginsController(
+        PluginManagerService pluginManager,
+        ILogger<PluginsController> logger) 
+        : base(logger)
     {
-        private readonly PluginManagerService _pluginManager;
-        private readonly ILogger<PluginsController> _logger;
+        _pluginManager = pluginManager;
+        _logger = logger;
+    }
 
-        public PluginsController(
-            PluginManagerService pluginManager,
-            ILogger<PluginsController> logger) 
-            : base(logger)
+    /// <summary>
+    /// Get all available plugin files from the plugins directory
+    /// </summary>
+    [HttpGet("available")]
+    public ActionResult<IEnumerable<AvailablePluginInfo>> GetAvailablePlugins()
+    {
+        try
         {
-            _pluginManager = pluginManager;
-            _logger = logger;
-        }
-
-        /// <summary>
-        /// Get all available plugins
-        /// </summary>
-        [HttpGet]
-        public ActionResult<IEnumerable<PluginInfo>> GetAvailablePlugins()
-        {
-            try
-            {
-                var plugins = _pluginManager.GetLoadedPlugins()
-                    .Select(p => new PluginInfo
-                    {
-                        Id = p.Id,
-                        Name = p.Name,
-                        Description = p.Description,
-                        Version = p.Version.ToString(),
-                        Author = p.Author,
-                        State = p.State.ToString(),
-                        Type = GetPluginType(p)
-                    })
-                    .ToList();
-
-                return Ok(plugins);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting available plugins");
-                return StatusCode(500, "Error retrieving plugins");
-            }
-        }
-
-        /// <summary>
-        /// Get details about a specific plugin
-        /// </summary>
-        [HttpGet("{pluginId}")]
-        public ActionResult<PluginInfo> GetPlugin(string pluginId)
-        {
-            try
-            {
-                var plugin = _pluginManager.GetPlugin(pluginId);
-                if (plugin == null)
+            var availablePlugins = _pluginManager.GetAvailablePluginFiles()
+                .Select(p => new AvailablePluginInfo
                 {
-                    return NotFound($"Plugin with ID {pluginId} not found");
-                }
+                    FileName = p.FileName,
+                    Name = p.Name,
+                    FilePath = p.FilePath,
+                    IsLoaded = p.IsLoaded,
+                    Type = p.Type
+                })
+                .ToList();
 
-                var pluginInfo = new PluginInfo
-                {
-                    Id = plugin.Id,
-                    Name = plugin.Name,
-                    Description = plugin.Description,
-                    Version = plugin.Version.ToString(),
-                    Author = plugin.Author,
-                    State = plugin.State.ToString(),
-                    Type = GetPluginType(plugin)
-                };
-
-                return Ok(pluginInfo);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error getting plugin {pluginId}");
-                return StatusCode(500, "Error retrieving plugin details");
-            }
+            return Ok(availablePlugins);
         }
-
-        /// <summary>
-        /// Load a plugin from the configured plugins directory
-        /// </summary>
-        [HttpPost("load")]
-        public async Task<IActionResult> LoadPlugin([FromQuery] string pluginName)
+        catch (Exception ex)
         {
-            try
-            {
-                if (string.IsNullOrEmpty(pluginName))
-                {
-                    return BadRequest("Plugin name is required");
-                }
-
-                // Get the plugins directory path from configuration
-                var pluginsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Plugins");
-                if (!Directory.Exists(pluginsDir))
-                {
-                    return BadRequest("Plugins directory not found");
-                }
-
-                // Find the plugin DLL
-                var pluginPath = Path.Combine(pluginsDir, $"{pluginName}.dll");
-                if (!System.IO.File.Exists(pluginPath))
-                {
-                    return NotFound($"Plugin file not found: {pluginName}.dll");
-                }
-
-                // Load the plugin
-                var plugin = await _pluginManager.LoadPluginAsync(pluginPath);
-                
-                var pluginInfo = new PluginInfo
-                {
-                    Id = plugin.Id,
-                    Name = plugin.Name,
-                    Description = plugin.Description,
-                    Version = plugin.Version.ToString(),
-                    Author = plugin.Author,
-                    State = plugin.State.ToString(),
-                    Type = GetPluginType(plugin)
-                };
-
-                return Ok(pluginInfo);
-            }
-            catch (SecurityException ex)
-            {
-                _logger.LogError(ex, $"Security error loading plugin {pluginName}");
-                return BadRequest($"Security verification failed: {ex.Message}");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error loading plugin {pluginName}");
-                return StatusCode(500, $"Error loading plugin: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// Unload a plugin
-        /// </summary>
-        [HttpPost("{pluginId}/unload")]
-        public async Task<IActionResult> UnloadPlugin(string pluginId)
-        {
-            try
-            {
-                await _pluginManager.UnloadPluginAsync(pluginId);
-                return Ok(new { Message = $"Plugin {pluginId} unloaded successfully" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error unloading plugin {pluginId}");
-                return StatusCode(500, $"Error unloading plugin: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// Get the available communication plugins for a channel
-        /// </summary>
-        [HttpGet("channel/{channelId}/communication")]
-        public ActionResult<IEnumerable<PluginInfo>> GetChannelCommunicationPlugins(Guid channelId)
-        {
-            try
-            {
-                // Get communication plugins
-                var communicationPlugins = _pluginManager.GetLoadedPlugins()
-                    .Where(p => p is ICommunicationPlugin)
-                    .Select(p => new PluginInfo
-                    {
-                        Id = p.Id,
-                        Name = p.Name,
-                        Description = p.Description,
-                        Version = p.Version.ToString(),
-                        Author = p.Author,
-                        State = p.State.ToString(),
-                        Type = "Communication"
-                    })
-                    .ToList();
-
-                return Ok(communicationPlugins);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error getting communication plugins for channel {channelId}");
-                return StatusCode(500, "Error retrieving communication plugins");
-            }
-        }
-
-        /// <summary>
-        /// Get the available collaboration plugins for a channel
-        /// </summary>
-        [HttpGet("channel/{channelId}/collaboration")]
-        public ActionResult<IEnumerable<PluginInfo>> GetChannelCollaborationPlugins(Guid channelId)
-        {
-            try
-            {
-                // Get collaboration plugins
-                var collaborationPlugins = _pluginManager.GetLoadedPlugins()
-                    .Where(p => p is ICollaborationPlugin)
-                    .Select(p => new PluginInfo
-                    {
-                        Id = p.Id,
-                        Name = p.Name,
-                        Description = p.Description,
-                        Version = p.Version.ToString(),
-                        Author = p.Author,
-                        State = p.State.ToString(),
-                        Type = "Collaboration"
-                    })
-                    .ToList();
-
-                return Ok(collaborationPlugins);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error getting collaboration plugins for channel {channelId}");
-                return StatusCode(500, "Error retrieving collaboration plugins");
-            }
-        }
-
-        /// <summary>
-        /// Determine the type of plugin based on interfaces it implements
-        /// </summary>
-        private string GetPluginType(IPlugin plugin)
-        {
-            if (plugin is ICommunicationPlugin)
-            {
-                return "Communication";
-            }
-            else if (plugin is ICollaborationPlugin)
-            {
-                return "Collaboration";
-            }
-            else
-            {
-                return "General";
-            }
+            _logger.LogError(ex, "Error getting available plugin files");
+            return StatusCode(500, "Error retrieving available plugins");
         }
     }
 
     /// <summary>
-    /// Model for plugin information
+    /// Get all loaded plugins
     /// </summary>
-    public class PluginInfo
+    [HttpGet]
+    public ActionResult<IEnumerable<PluginInfo>> GetLoadedPlugins()
     {
-        public string Id { get; set; }
-        public string Name { get; set; }
-        public string Description { get; set; }
-        public string Version { get; set; }
-        public string Author { get; set; }
-        public string State { get; set; }
-        public string Type { get; set; }
+        try
+        {
+            var plugins = _pluginManager.GetLoadedPlugins()
+                .Select(p => new PluginInfo
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    Description = p.Description,
+                    Version = p.Version.ToString(),
+                    Author = p.Author,
+                    State = p.State.ToString(),
+                    Type = GetPluginType(p)
+                })
+                .ToList();
+
+            return Ok(plugins);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting loaded plugins");
+            return StatusCode(500, "Error retrieving plugins");
+        }
     }
+
+    /// <summary>
+    /// Get details about a specific plugin
+    /// </summary>
+    [HttpGet("{pluginId}")]
+    public ActionResult<PluginInfo> GetPlugin(string pluginId)
+    {
+        try
+        {
+            var plugin = _pluginManager.GetPlugin(pluginId);
+            if (plugin == null)
+            {
+                return NotFound($"Plugin with ID {pluginId} not found");
+            }
+
+            var pluginInfo = new PluginInfo
+            {
+                Id = plugin.Id,
+                Name = plugin.Name,
+                Description = plugin.Description,
+                Version = plugin.Version.ToString(),
+                Author = plugin.Author,
+                State = plugin.State.ToString(),
+                Type = GetPluginType(plugin)
+            };
+
+            return Ok(pluginInfo);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error getting plugin {pluginId}");
+            return StatusCode(500, "Error retrieving plugin details");
+        }
+    }
+
+    /// <summary>
+    /// Load a plugin from the configured plugins directory
+    /// </summary>
+    [HttpPost("load")]
+    public async Task<IActionResult> LoadPlugin([FromQuery] string pluginName)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(pluginName))
+            {
+                return BadRequest("Plugin name is required");
+            }
+
+            // Get the plugins directory path from configuration
+            var pluginsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Plugins");
+            if (!Directory.Exists(pluginsDir))
+            {
+                return BadRequest("Plugins directory not found");
+            }
+
+            // Find the plugin DLL
+            var pluginPath = Path.Combine(pluginsDir, $"{pluginName}.dll");
+            if (!System.IO.File.Exists(pluginPath))
+            {
+                return NotFound($"Plugin file not found: {pluginName}.dll");
+            }
+
+            // Load the plugin
+            var plugin = await _pluginManager.LoadPluginAsync(pluginPath);
+            
+            var pluginInfo = new PluginInfo
+            {
+                Id = plugin.Id,
+                Name = plugin.Name,
+                Description = plugin.Description,
+                Version = plugin.Version.ToString(),
+                Author = plugin.Author,
+                State = plugin.State.ToString(),
+                Type = GetPluginType(plugin)
+            };
+
+            return Ok(pluginInfo);
+        }
+        catch (SecurityException ex)
+        {
+            _logger.LogError(ex, $"Security error loading plugin {pluginName}");
+            return BadRequest($"Security verification failed: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error loading plugin {pluginName}");
+            return StatusCode(500, $"Error loading plugin: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Load a plugin by file path
+    /// </summary>
+    [HttpPost("load-by-path")]
+    public async Task<IActionResult> LoadPluginByPath([FromQuery] string pluginPath)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(pluginPath))
+            {
+                return BadRequest("Plugin path is required");
+            }
+
+            if (!System.IO.File.Exists(pluginPath))
+            {
+                return NotFound($"Plugin file not found: {pluginPath}");
+            }
+
+            // Load the plugin
+            var plugin = await _pluginManager.LoadPluginAsync(pluginPath);
+            
+            var pluginInfo = new PluginInfo
+            {
+                Id = plugin.Id,
+                Name = plugin.Name,
+                Description = plugin.Description,
+                Version = plugin.Version.ToString(),
+                Author = plugin.Author,
+                State = plugin.State.ToString(),
+                Type = GetPluginType(plugin)
+            };
+
+            return Ok(pluginInfo);
+        }
+        catch (SecurityException ex)
+        {
+            _logger.LogError(ex, $"Security error loading plugin {pluginPath}");
+            return BadRequest($"Security verification failed: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error loading plugin {pluginPath}");
+            return StatusCode(500, $"Error loading plugin: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Unload a plugin
+    /// </summary>
+    [HttpPost("{pluginId}/unload")]
+    public async Task<IActionResult> UnloadPlugin(string pluginId)
+    {
+        try
+        {
+            await _pluginManager.UnloadPluginAsync(pluginId);
+            return Ok(new { Message = $"Plugin {pluginId} unloaded successfully" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error unloading plugin {pluginId}");
+            return StatusCode(500, $"Error unloading plugin: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Get the available communication plugins for a channel
+    /// </summary>
+    [HttpGet("channel/{channelId}/communication")]
+    public ActionResult<IEnumerable<PluginInfo>> GetChannelCommunicationPlugins(Guid channelId)
+    {
+        try
+        {
+            // Get communication plugins
+            var communicationPlugins = _pluginManager.GetLoadedPlugins()
+                .Where(p => p is ICommunicationPlugin)
+                .Select(p => new PluginInfo
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    Description = p.Description,
+                    Version = p.Version.ToString(),
+                    Author = p.Author,
+                    State = p.State.ToString(),
+                    Type = "Communication"
+                })
+                .ToList();
+
+            return Ok(communicationPlugins);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error getting communication plugins for channel {channelId}");
+            return StatusCode(500, "Error retrieving communication plugins");
+        }
+    }
+
+    /// <summary>
+    /// Get the available collaboration plugins for a channel
+    /// </summary>
+    [HttpGet("channel/{channelId}/collaboration")]
+    public ActionResult<IEnumerable<PluginInfo>> GetChannelCollaborationPlugins(Guid channelId)
+    {
+        try
+        {
+            // Get collaboration plugins
+            var collaborationPlugins = _pluginManager.GetLoadedPlugins()
+                .Where(p => p is ICollaborationPlugin)
+                .Select(p => new PluginInfo
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    Description = p.Description,
+                    Version = p.Version.ToString(),
+                    Author = p.Author,
+                    State = p.State.ToString(),
+                    Type = "Collaboration"
+                })
+                .ToList();
+
+            return Ok(collaborationPlugins);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error getting collaboration plugins for channel {channelId}");
+            return StatusCode(500, "Error retrieving collaboration plugins");
+        }
+    }
+
+    /// <summary>
+    /// Determine the type of plugin based on interfaces it implements
+    /// </summary>
+    private string GetPluginType(IPlugin plugin)
+    {
+        if (plugin is ICommunicationPlugin)
+        {
+            return "Communication";
+        }
+        else if (plugin is ICollaborationPlugin)
+        {
+            return "Collaboration";
+        }
+        else
+        {
+            return "General";
+        }
+    }
+}
+
+/// <summary>
+/// Model for available plugin file information
+/// </summary>
+public class AvailablePluginInfo
+{
+    public string FileName { get; set; }
+    public string Name { get; set; }
+    public string FilePath { get; set; }
+    public bool IsLoaded { get; set; }
+    public string Type { get; set; }
+}
+
+/// <summary>
+/// Model for loaded plugin information
+/// </summary>
+public class PluginInfo
+{
+    public string Id { get; set; }
+    public string Name { get; set; }
+    public string Description { get; set; }
+    public string Version { get; set; }
+    public string Author { get; set; }
+    public string State { get; set; }
+    public string Type { get; set; }
+}

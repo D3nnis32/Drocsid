@@ -15,12 +15,12 @@ namespace Logic.UI.ViewModels
     {
         private readonly HttpClient _httpClient;
         private readonly Window _window;
-        private ObservableCollection<PluginInfo> _availablePlugins = new ObservableCollection<PluginInfo>();
-        private PluginInfo _selectedPlugin;
+        private ObservableCollection<AvailablePluginInfo> _availablePlugins = new ObservableCollection<AvailablePluginInfo>();
+        private AvailablePluginInfo _selectedAvailablePlugin;
         private bool _isLoading;
         private string _statusMessage;
 
-        public ObservableCollection<PluginInfo> AvailablePlugins
+        public ObservableCollection<AvailablePluginInfo> AvailablePlugins
         {
             get => _availablePlugins;
             set
@@ -30,12 +30,12 @@ namespace Logic.UI.ViewModels
             }
         }
 
-        public PluginInfo SelectedPlugin
+        public AvailablePluginInfo SelectedAvailablePlugin
         {
-            get => _selectedPlugin;
+            get => _selectedAvailablePlugin;
             set
             {
-                _selectedPlugin = value;
+                _selectedAvailablePlugin = value;
                 OnPropertyChanged();
                 CommandManager.InvalidateRequerySuggested();
             }
@@ -80,7 +80,7 @@ namespace Logic.UI.ViewModels
             // Initialize commands
             LoadPluginCommand = new RelayCommand(
                 execute: LoadSelectedPlugin,
-                canExecute: () => SelectedPlugin != null && SelectedPlugin.State != "Running"
+                canExecute: () => SelectedAvailablePlugin != null && !SelectedAvailablePlugin.IsLoaded
             );
 
             CloseWindowCommand = new RelayCommand(
@@ -88,21 +88,21 @@ namespace Logic.UI.ViewModels
             );
 
             // Load plugins when created
-            LoadPlugins();
+            LoadAvailablePlugins();
         }
 
-        private async void LoadPlugins()
+        private async void LoadAvailablePlugins()
         {
             try
             {
                 IsLoading = true;
                 StatusMessage = "Loading plugins...";
 
-                var response = await _httpClient.GetAsync("api/plugins");
+                var response = await _httpClient.GetAsync("api/plugins/available");
                 
                 if (response.IsSuccessStatusCode)
                 {
-                    var plugins = await response.Content.ReadFromJsonAsync<PluginInfo[]>();
+                    var plugins = await response.Content.ReadFromJsonAsync<AvailablePluginInfo[]>();
                     
                     Application.Current.Dispatcher.Invoke(() => {
                         AvailablePlugins.Clear();
@@ -112,7 +112,7 @@ namespace Logic.UI.ViewModels
                         }
                     });
                     
-                    StatusMessage = $"Loaded {plugins.Length} plugins";
+                    StatusMessage = $"Found {plugins.Length} plugins";
                 }
                 else
                 {
@@ -131,28 +131,37 @@ namespace Logic.UI.ViewModels
 
         private async void LoadSelectedPlugin()
         {
-            if (SelectedPlugin == null) return;
+            if (SelectedAvailablePlugin == null) return;
 
             try
             {
                 IsLoading = true;
-                StatusMessage = $"Loading plugin: {SelectedPlugin.Name}...";
+                StatusMessage = $"Loading {SelectedAvailablePlugin.Name}...";
 
+                // Load the plugin by file path
                 var response = await _httpClient.PostAsync(
-                    $"api/plugins/load?pluginName={Uri.EscapeDataString(SelectedPlugin.Name)}", 
+                    $"api/plugins/load-by-path?pluginPath={Uri.EscapeDataString(SelectedAvailablePlugin.FilePath)}", 
                     null);
                 
                 if (response.IsSuccessStatusCode)
                 {
-                    var loadedPlugin = await response.Content.ReadFromJsonAsync<PluginInfo>();
-                    StatusMessage = $"Successfully loaded plugin: {SelectedPlugin.Name}";
+                    var loadedPlugin = await response.Content.ReadFromJsonAsync<LoadedPluginInfo>();
+                    StatusMessage = $"Loaded {SelectedAvailablePlugin.Name}";
                     
-                    // Refresh the plugin list
-                    LoadPlugins();
+                    // Update the plugin's status in our collection
+                    var plugin = AvailablePlugins.FirstOrDefault(p => p.FilePath == SelectedAvailablePlugin.FilePath);
+                    if (plugin != null)
+                    {
+                        plugin.IsLoaded = true;
+                        // Trigger a refresh of the UI
+                        SelectedAvailablePlugin = null;
+                        SelectedAvailablePlugin = plugin;
+                    }
                 }
                 else
                 {
-                    StatusMessage = $"Failed to load plugin: {response.StatusCode}";
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    StatusMessage = $"Failed: {response.StatusCode}";
                 }
             }
             catch (Exception ex)
@@ -178,7 +187,22 @@ namespace Logic.UI.ViewModels
         }
     }
 
-    public class PluginInfo
+    /// <summary>
+    /// Model for an available plugin
+    /// </summary>
+    public class AvailablePluginInfo
+    {
+        public string FileName { get; set; }
+        public string Name { get; set; }
+        public string FilePath { get; set; }
+        public bool IsLoaded { get; set; }
+        public string Type { get; set; }
+    }
+
+    /// <summary>
+    /// Model for a loaded plugin
+    /// </summary>
+    public class LoadedPluginInfo
     {
         public string Id { get; set; }
         public string Name { get; set; }

@@ -30,4 +30,7 @@ RUN mkdir -p /app/Plugins
 # Make sure the directory is writable by the container user
 RUN chmod 777 /app/Plugins
 
+COPY --from=build /src/VoiceChatPlugin/bin/Release/net8.0-windows/VoiceChatPlugin.dll /app/Plugins/
+COPY --from=build /src/WhiteboardPlugin/bin/Release/net8.0-windows/WhiteboardPlugin.dll /app/Plugins/
+
 ENTRYPOINT ["dotnet", "Api.dll"]
