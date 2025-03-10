@@ -34,6 +34,7 @@ builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 
 builder.Services.AddScoped<ILogger<BaseController>, Logger<BaseController>>();
+builder.Services.AddScoped<ILogger<HealthController>, Logger<HealthController>>();
 
 // Add PasswordHasher
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
@@ -216,5 +217,9 @@ if (!string.IsNullOrEmpty(nodeId) && !string.IsNullOrEmpty(registryEndpoint))
         // Continue startup even if registration fails
     }
 }
+
+app.MapGet("/health", () => {
+    return Results.Ok(new { status = "healthy" });
+});
 
 app.Run();

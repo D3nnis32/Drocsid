@@ -17,6 +17,10 @@ public class ChatHub : Microsoft.AspNetCore.SignalR.Hub
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly NodeRegistrationOptions _nodeOptions;
     private readonly ILogger<ChatHub> _logger;
+    
+    // Add a static dictionary to track user connections across hubs
+    private static readonly Dictionary<Guid, HashSet<string>> UserConnections = new();
+    private static readonly object ConnectionLock = new();
 
     public ChatHub(
         IChannelService channelService,
@@ -41,8 +45,32 @@ public class ChatHub : Microsoft.AspNetCore.SignalR.Hub
             // Get user ID from authenticated user
             var userId = GetCurrentUserId();
 
+            // Get user details
+            var user = await _userService.GetUserByIdAsync(userId);
+            if (user == null)
+            {
+                throw new HubException("User not found");
+            }
+
+            // Check if this is a reconnection after node failover
+            bool isFailoverReconnection = false;
+            string reconnectionToken = Context.GetHttpContext().Request.Query["reconnection"].ToString();
+            if (!string.IsNullOrEmpty(reconnectionToken))
+            {
+                isFailoverReconnection = true;
+                _logger.LogInformation("User {UserId} reconnecting after node failover with token {Token}", 
+                    userId, reconnectionToken);
+            }
+
+            // Add connection ID to tracked connections for this user
+            TrackUserConnection(userId, Context.ConnectionId);
+
             // Update user status to online
-            await _userService.UpdateUserStatusAsync(userId, UserStatus.Online);
+            if (!isFailoverReconnection)
+            {
+                // Only update status if this is a fresh connection, not failover
+                await _userService.UpdateUserStatusAsync(userId, UserStatus.Online);
+            }
 
             // Get all user's channels and join those groups
             var channels = await _channelService.GetUserChannelsAsync(userId);
@@ -51,20 +79,38 @@ public class ChatHub : Microsoft.AspNetCore.SignalR.Hub
             {
                 await Groups.AddToGroupAsync(Context.ConnectionId, channel.Id.ToString());
                 
-                // Notify all members in the channel about the status change
-                await Clients.Group(channel.Id.ToString()).SendAsync("UserStatusChanged", userId, UserStatus.Online);
+                // Only notify other users if this is a new connection, not a failover
+                if (!isFailoverReconnection)
+                {
+                    // Notify all members in the channel about the status change
+                    await Clients.OthersInGroup(channel.Id.ToString()).SendAsync("UserStatusChanged", userId, UserStatus.Online);
+                }
             }
             
             // Notify registry about the user's online status
-            await NotifyRegistryAboutUserStatusAsync(userId, UserStatus.Online);
+            if (!isFailoverReconnection)
+            {
+                await NotifyRegistryAboutUserStatusAsync(userId, UserStatus.Online);
+            }
 
             await base.OnConnectedAsync();
             
-            _logger.LogInformation("User {UserId} connected to hub", userId);
+            // If this is a reconnection, send a confirmation to the client
+            if (isFailoverReconnection)
+            {
+                await Clients.Caller.SendAsync("ReconnectionComplete", new { success = true, nodeId = _nodeOptions.NodeId });
+            }
+            else
+            {
+                _logger.LogInformation("User {UserId} connected to hub", userId);
+            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error in OnConnectedAsync");
+            
+            // Let the client know there was a connection error
+            await Clients.Caller.SendAsync("ConnectionError", ex.Message);
         }
     }
 
@@ -75,29 +121,134 @@ public class ChatHub : Microsoft.AspNetCore.SignalR.Hub
             // Get user ID from authenticated user
             var userId = GetCurrentUserId();
 
-            // Update user status to offline
-            await _userService.UpdateUserStatusAsync(userId, UserStatus.Offline);
+            // Remove this connection from tracked connections
+            bool isLastConnection = RemoveUserConnection(userId, Context.ConnectionId);
 
-            // Get all user's channels
-            var channels = await _channelService.GetUserChannelsAsync(userId);
-
-            // Notify all user's channels about the status change and leave groups
-            foreach (var channel in channels)
+            // Only update user status if this is their last connection
+            if (isLastConnection)
             {
-                await Clients.Group(channel.Id.ToString()).SendAsync("UserStatusChanged", userId, UserStatus.Offline);
-                await Groups.RemoveFromGroupAsync(Context.ConnectionId, channel.Id.ToString());
+                // Update user status to offline
+                await _userService.UpdateUserStatusAsync(userId, UserStatus.Offline);
+
+                // Get all user's channels
+                var channels = await _channelService.GetUserChannelsAsync(userId);
+
+                // Notify all user's channels about the status change
+                foreach (var channel in channels)
+                {
+                    await Clients.Group(channel.Id.ToString()).SendAsync("UserStatusChanged", userId, UserStatus.Offline);
+                    await Groups.RemoveFromGroupAsync(Context.ConnectionId, channel.Id.ToString());
+                }
+                
+                // Notify registry about the user's offline status
+                await NotifyRegistryAboutUserStatusAsync(userId, UserStatus.Offline);
+                
+                _logger.LogInformation("User {UserId} disconnected from hub (last connection)", userId);
             }
-            
-            // Notify registry about the user's offline status
-            await NotifyRegistryAboutUserStatusAsync(userId, UserStatus.Offline);
+            else
+            {
+                // Just remove from groups but don't change status
+                var channels = await _channelService.GetUserChannelsAsync(userId);
+                foreach (var channel in channels)
+                {
+                    await Groups.RemoveFromGroupAsync(Context.ConnectionId, channel.Id.ToString());
+                }
+                
+                _logger.LogDebug("User {UserId} disconnected a connection, but still has active connections", userId);
+            }
 
             await base.OnDisconnectedAsync(exception);
-            
-            _logger.LogInformation("User {UserId} disconnected from hub", userId);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error in OnDisconnectedAsync: {Message}", ex.Message);
+        }
+    }
+    
+    /// <summary>
+    /// Handle client signaling that they are being redirected to another node
+    /// </summary>
+    public async Task NotifyRedirecting(string newNodeId)
+    {
+        var userId = GetCurrentUserId();
+        
+        _logger.LogInformation("User {UserId} notifying that they are being redirected to node {NodeId}", 
+            userId, newNodeId);
+        
+        // Don't change user status, as they should reconnect to another node shortly
+        // But we do need to clean up local resources
+        
+        try
+        {
+            // Get all user's channels
+            var channels = await _channelService.GetUserChannelsAsync(userId);
+            
+            // Remove from groups
+            foreach (var channel in channels)
+            {
+                await Groups.RemoveFromGroupAsync(Context.ConnectionId, channel.Id.ToString());
+            }
+            
+            // Remove connection tracking
+            RemoveUserConnection(userId, Context.ConnectionId);
+            
+            // Notify the client we acknowledged their redirect
+            await Clients.Caller.SendAsync("RedirectAcknowledged", new { success = true });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing redirect notification for user {UserId}", userId);
+        }
+    }
+
+    /// <summary>
+    /// Synchronize a user's state after reconnecting to a different node
+    /// </summary>
+    public async Task SyncAfterNodeMigration(DateTime lastMessageTimestamp)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            _logger.LogInformation("User {UserId} requesting state sync after node migration", userId);
+            
+            // Get all user's channels
+            var channels = await _channelService.GetUserChannelsAsync(userId);
+            
+            // For each channel, get messages since the last timestamp
+            var recentMessages = new Dictionary<Guid, List<Message>>();
+            
+            foreach (var channel in channels)
+            {
+                var messages = await _messageService.GetChannelMessagesAsync(
+                    channel.Id, 
+                    0, 
+                    100); // Limit to reasonable number
+                    
+                // Filter to only messages after the timestamp
+                var filteredMessages = messages
+                    .Where(m => m.SentAt > lastMessageTimestamp)
+                    .ToList();
+                    
+                if (filteredMessages.Any())
+                {
+                    recentMessages[channel.Id] = filteredMessages;
+                }
+            }
+            
+            // Send the sync data to the client
+            await Clients.Caller.SendAsync("StateSyncData", new
+            {
+                channels = channels,
+                messages = recentMessages,
+                serverTime = DateTime.UtcNow
+            });
+            
+            _logger.LogInformation("State sync completed for user {UserId} after node migration", userId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error syncing state after node migration");
+            await Clients.Caller.SendAsync("StateSyncError", ex.Message);
         }
     }
 
@@ -386,6 +537,54 @@ public class ChatHub : Microsoft.AspNetCore.SignalR.Hub
         {
             _logger.LogError(ex, "Error getting messages from registry");
             return new List<Message>();
+        }
+    }
+
+    /// <summary>
+    /// Track a user's connection in the static dictionary
+    /// </summary>
+    private void TrackUserConnection(Guid userId, string connectionId)
+    {
+        lock (ConnectionLock)
+        {
+            if (!UserConnections.TryGetValue(userId, out var connections))
+            {
+                connections = new HashSet<string>();
+                UserConnections[userId] = connections;
+            }
+            
+            connections.Add(connectionId);
+            
+            _logger.LogDebug("User {UserId} added connection {ConnectionId}, total connections: {Count}",
+                userId, connectionId, connections.Count);
+        }
+    }
+    
+    /// <summary>
+    /// Remove a user's connection from tracking
+    /// </summary>
+    /// <returns>True if this was the user's last connection</returns>
+    private bool RemoveUserConnection(Guid userId, string connectionId)
+    {
+        lock (ConnectionLock)
+        {
+            if (!UserConnections.TryGetValue(userId, out var connections))
+            {
+                return true; // No connections tracked
+            }
+            
+            connections.Remove(connectionId);
+            
+            _logger.LogDebug("User {UserId} removed connection {ConnectionId}, remaining connections: {Count}",
+                userId, connectionId, connections.Count);
+                
+            if (connections.Count == 0)
+            {
+                UserConnections.Remove(userId);
+                return true;
+            }
+            
+            return false;
         }
     }
 }
