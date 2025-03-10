@@ -153,6 +153,7 @@ namespace Logic.UI.ViewModels
                     if (plugin != null)
                     {
                         plugin.IsLoaded = true;
+                        OnPropertyChanged(nameof(AvailablePlugins));
                         // Trigger a refresh of the UI
                         SelectedAvailablePlugin = null;
                         SelectedAvailablePlugin = plugin;
