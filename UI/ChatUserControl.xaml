@@ -73,14 +73,29 @@
                                 <TextBlock Grid.Row="1" Text="{Binding Content}" Foreground="White" TextWrapping="Wrap" Margin="0,5,0,0"/>
 
                                 <!-- Attachments Section -->
-                                <ItemsControl Grid.Row="2" ItemsSource="{Binding Attachments}" Margin="0,5,0,0" Visibility="{Binding Attachments.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                                <ItemsControl Grid.Row="2" ItemsSource="{Binding Attachments}" 
+                                              Margin="0,5,0,0" 
+                                              Visibility="{Binding Attachments.Count, Converter={StaticResource CountToVisibilityConverter}}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <Border Background="#2D2D2D" Margin="0,2" Padding="5" CornerRadius="3">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="{Binding Filename}" Foreground="#569CD6"/>
-                                                    <Button Content="⬇" Command="{Binding DataContext.DownloadAttachmentCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}" CommandParameter="{Binding}" ToolTip="Download"/>
-                                                </StackPanel>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding Filename}" Foreground="#569CD6" VerticalAlignment="Center"/>
+                                                    <Button Grid.Column="1" 
+                                                            Margin="5,0,0,0" 
+                                                            Padding="5,0" 
+                                                            Content="⬇" 
+                                                            Foreground="White"
+                                                            Background="Transparent"
+                                                            BorderThickness="0"
+                                                            Command="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ItemsControl}}, Path=DataContext.DownloadAttachmentCommand}" 
+                                                            CommandParameter="{Binding}"
+                                                            ToolTip="Download attachment" />
+                                                </Grid>
                                             </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>

@@ -14,6 +14,6 @@ public class Message
     public string Content { get; set; }
     public DateTime SentAt { get; set; } = DateTime.UtcNow;
     public DateTime? EditedAt { get; set; }
-    public List<Attachment> Attachments { get; set; } = new();
+    public List<Attachment> Attachments { get; set; } = new List<Attachment>();
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 }

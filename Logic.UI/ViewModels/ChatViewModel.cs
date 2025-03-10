@@ -372,7 +372,6 @@ namespace Logic.UI.ViewModels
                 if (response.IsSuccessStatusCode)
                 {
                     var messages = await response.Content.ReadFromJsonAsync<Message[]>();
-
                     Console.WriteLine($"DEBUG: Loaded {messages.Length} messages.");
 
                     System.Windows.Application.Current.Dispatcher.Invoke(() =>
@@ -380,16 +379,18 @@ namespace Logic.UI.ViewModels
                         Messages.Clear();
                         foreach (var message in messages)
                         {
-                            Console.WriteLine($"DEBUG: Message ID: {message.Id}, Content: {message.Content}");
-
-                            if (message.Attachments != null)
+                            if (message.Attachments != null && message.Attachments.Any())
                             {
+                                Console.WriteLine($"DEBUG: Message {message.Id} has {message.Attachments.Count} attachments");
                                 foreach (var attachment in message.Attachments)
                                 {
-                                    Console.WriteLine($"DEBUG: Attachment ID: {attachment.Id}, Filename: {attachment.Filename}");
+                                    Console.WriteLine($"DEBUG: Attachment ID: {attachment.Id}, Filename: {attachment.Filename ?? "null"}");
                                 }
                             }
-
+                            else
+                            {
+                                Console.WriteLine($"DEBUG: Message {message.Id} has no attachments");
+                            }
                             Messages.Add(message);
                         }
                     });
