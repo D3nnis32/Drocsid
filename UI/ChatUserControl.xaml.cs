@@ -1,4 +1,5 @@
 ﻿using Logic.UI.ViewModels;
+using System;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -19,12 +20,14 @@ namespace UI
             if (e.OldValue is ChatViewModel oldViewModel)
             {
                 oldViewModel.RequestOpenAddMembersWindow -= ChatViewModel_RequestOpenAddMembersWindow;
+                oldViewModel.RequestShowPluginsWindow -= ViewModel_RequestShowPluginsWindow;
                 _eventSubscribed = false;
             }
 
             if (e.NewValue is ChatViewModel newViewModel && !_eventSubscribed)
             {
                 newViewModel.RequestOpenAddMembersWindow += ChatViewModel_RequestOpenAddMembersWindow;
+                newViewModel.RequestShowPluginsWindow += ViewModel_RequestShowPluginsWindow;
                 _eventSubscribed = true;
             }
         }
@@ -44,6 +47,15 @@ namespace UI
             }
             addMembersWindow.Owner = Window.GetWindow(this);
             addMembersWindow.ShowDialog();
+        }
+        
+        private void ViewModel_RequestShowPluginsWindow(object sender, System.EventArgs e)
+        {
+            var pluginManager = new PluginManagerWindow();
+            var viewModel = new PluginManagerViewModel(pluginManager);
+            pluginManager.DataContext = viewModel;
+            pluginManager.Owner = Window.GetWindow(this);
+            pluginManager.ShowDialog();
         }
     }
 }

@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e
+
+# Ensure Plugins directory exists
+mkdir -p /app/Plugins
+
+# List available plugin files
+echo "Available plugin DLLs in /app/Plugins:"
+ls -la /app/Plugins
+
+# Start the API application
+exec dotnet Api.dll

@@ -1,0 +1,8 @@
+###
+POST http://localhost:5186/api/plugins/load?pluginName=WhiteboardPlugin
+
+###
+POST http://localhost:5186/api/plugins/load?pluginName=VoiceChatPlugin
+
+###
+GET http://localhost:5186/api/plugins

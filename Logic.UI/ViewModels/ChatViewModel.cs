@@ -10,7 +10,9 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Threading;
+using Logic.UI.ViewModels.Services;
 
 namespace Logic.UI.ViewModels
 {
@@ -76,12 +78,14 @@ namespace Logic.UI.ViewModels
 
         public RelayCommand SendMessageCommand { get; }
         public RelayCommand RefreshMessagesCommand { get; }
+        public ICommand ShowPluginsCommand { get; }
         public RelayCommand AddAttachmentCommand { get; }
         public RelayCommand<PendingAttachment> RemoveAttachmentCommand { get; }
         public RelayCommand<Attachment> DownloadAttachmentCommand { get; }
         public RelayCommand OpenAddMembersWindowCommand { get; }
 
         public event EventHandler RequestOpenAddMembersWindow;
+        public event EventHandler RequestShowPluginsWindow;
 
         public ChatViewModel(Channel channel)
         {
@@ -92,6 +96,8 @@ namespace Logic.UI.ViewModels
                 execute: SendMessage,
                 canExecute: () => (!string.IsNullOrWhiteSpace(MessageText) || PendingAttachments.Count > 0) && !IsSending
             );
+            
+            ShowPluginsCommand = new RelayCommand(OnShowPluginsDialog);
 
             OpenAddMembersWindowCommand = new RelayCommand(OpenAddMembersWindow);
 
@@ -128,6 +134,20 @@ namespace Logic.UI.ViewModels
             // Load initial messages
             Task.Run(async () => await LoadMessagesAsync());
         }
+        
+        private void OnShowPluginsDialog()
+        {
+            try
+            {
+                // Instead of creating the window here, raise an event for the view to handle
+                RequestShowPluginsWindow?.Invoke(this, EventArgs.Empty);
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = $"Error opening plugins dialog: {ex.Message}";
+            }
+        }
+        
         private void OpenAddMembersWindow()
         {
             RequestOpenAddMembersWindow?.Invoke(this, EventArgs.Empty);
