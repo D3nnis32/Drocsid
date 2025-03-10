@@ -54,11 +54,11 @@ Content-Type: application/json
 %}
 
 ### Step 3: Verify the token with the first storage node (this syncs the user to node1)
-POST http://localhost:5186/api/auth/verify-token
+POST {{nodeUrl}}/api/auth/verify-token
 Content-Type: application/json
 
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiYTU4MzRjNy0yNzBlLTRkYzYtYTRhYi0wMmZhZDFlYTc5MDUiLCJ1bmlxdWVfbmFtZSI6IjIiLCJqdGkiOiIwZjE2OTIyNy1iOWRmLTQ5NGQtYmRkMi01NjJjY2UzN2I4ZDIiLCJleHAiOjE3NDIxNjYzMjgsImlzcyI6IkhlbnJpa0Rlbm5pcyIsImF1ZCI6IkFwaUFwcCJ9.2fUhGmigRb_EOQGBY0O6XxKnO7vGrQdoix9RHqyCsE4"
+  "token": "{{Token}}"
 }
 
 ### Step 2: Login through the Gateway to get token and node assignment

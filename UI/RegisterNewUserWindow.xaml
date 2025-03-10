@@ -1,11 +1,14 @@
 ﻿<Window x:Class="UI.RegisterNewUserWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Register New User" Height="200" Width="400"
+        Title="Register New User" Height="350" Width="400"
         Background="#202225"
-        Foreground="White">
-    <Grid Margin="10">
+        Foreground="White"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="20">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -13,42 +16,169 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="110"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Header -->
+        <TextBlock Grid.Row="0" Grid.ColumnSpan="2" 
+                   Text="Create New Account" 
+                   FontSize="18" 
+                   FontWeight="Bold" 
+                   Margin="0,0,0,15" 
+                   Foreground="White"/>
 
         <!-- Username -->
-        <TextBlock Text="Username:" Grid.Row="0" VerticalAlignment="Center"/>
-        <TextBox Text="{Binding Username}" Grid.Row="0" Margin="80,0,0,5" Width="200"/>
+        <TextBlock Text="Username:" 
+                   Grid.Row="1" 
+                   Grid.Column="0" 
+                   VerticalAlignment="Center" 
+                   Foreground="White"/>
+        <Border Grid.Row="1" 
+                Grid.Column="1" 
+                Background="#3E3E3E" 
+                CornerRadius="3" 
+                Margin="0,5,0,5">
+            <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}" 
+                     Background="Transparent" 
+                     BorderThickness="0" 
+                     Padding="5,3" 
+                     Foreground="White"/>
+        </Border>
 
         <!-- Email -->
-        <TextBlock Text="Email:" Grid.Row="1" VerticalAlignment="Center"/>
-        <TextBox Text="{Binding Email}" Grid.Row="1" Margin="80,0,0,5" Width="200"/>
+        <TextBlock Text="Email:" 
+                   Grid.Row="2" 
+                   Grid.Column="0" 
+                   VerticalAlignment="Center" 
+                   Foreground="White"/>
+        <Border Grid.Row="2" 
+                Grid.Column="1" 
+                Background="#3E3E3E" 
+                CornerRadius="3" 
+                Margin="0,5,0,5">
+            <TextBox Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}" 
+                     Background="Transparent" 
+                     BorderThickness="0" 
+                     Padding="5,3" 
+                     Foreground="White"/>
+        </Border>
 
-        <!-- Password (PasswordBox) -->
-        <TextBlock Text="Password:" Grid.Row="2" VerticalAlignment="Center"/>
-        <PasswordBox x:Name="PasswordBoxControl" 
-                     Grid.Row="2" Margin="80,0,0,5" Width="200"
-                     PasswordChanged="PasswordBox_PasswordChanged"/>
+        <!-- Password -->
+        <TextBlock Text="Password:" 
+                   Grid.Row="3" 
+                   Grid.Column="0" 
+                   VerticalAlignment="Center" 
+                   Foreground="White"/>
+        <Border Grid.Row="3" 
+                Grid.Column="1" 
+                Background="#3E3E3E" 
+                CornerRadius="3" 
+                Margin="0,5,0,5">
+            <PasswordBox x:Name="PasswordBoxControl" 
+                         Background="Transparent" 
+                         BorderThickness="0" 
+                         Padding="5,3" 
+                         PasswordChanged="PasswordBox_PasswordChanged"
+                         Foreground="White"/>
+        </Border>
 
         <!-- Preferred Region -->
-        <TextBlock Text="Preferred Region:" Grid.Row="3" VerticalAlignment="Center"/>
-        <TextBox Text="{Binding PreferredRegion}" 
-                 Grid.Row="3" Margin="110,0,0,5" Width="170"/>
+        <TextBlock Text="Region:" 
+                   Grid.Row="4" 
+                   Grid.Column="0" 
+                   VerticalAlignment="Center" 
+                   Foreground="White"/>
+        <Border Grid.Row="4" 
+                Grid.Column="1" 
+                Background="#3E3E3E" 
+                CornerRadius="3" 
+                Margin="0,5,0,5">
+            <TextBox Text="{Binding PreferredRegion, UpdateSourceTrigger=PropertyChanged}" 
+                     Background="Transparent" 
+                     BorderThickness="0" 
+                     Padding="5,3" 
+                     Foreground="White"/>
+        </Border>
+
+        <!-- Status Message -->
+        <TextBlock Grid.Row="5" 
+                   Grid.ColumnSpan="2" 
+                   Text="{Binding StatusMessage}" 
+                   Foreground="#AAAAAA" 
+                   Margin="0,10,0,5"/>
 
         <!-- Buttons -->
-        <StackPanel Orientation="Horizontal" Grid.Row="4">
-            <Button Content="Register" 
-                    Width="80" 
-                    Command="{Binding RegisterCommand}" 
-                    Margin="0,10,0,0"/>
-
+        <StackPanel Grid.Row="6" 
+                    Grid.ColumnSpan="2" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right" 
+                    Margin="0,15,0,0">
             <Button Content="Close" 
                     Width="80" 
-                    Command="{Binding CloseWindowCommand}"
-                    Margin="100,10,0,0"/>
+                    Height="30"
+                    Command="{Binding CloseWindowCommand}" 
+                    Margin="0,0,10,0"
+                    Background="#3E3E3E"
+                    Foreground="White"
+                    BorderThickness="0"/>
+            <Button Content="Register" 
+                    Width="80" 
+                    Height="30"
+                    Command="{Binding RegisterCommand}" 
+                    Background="#7289DA"
+                    Foreground="White"
+                    BorderThickness="0">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}"
+                                            CornerRadius="3"
+                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                            BorderBrush="{TemplateBinding BorderBrush}">
+                                        <ContentPresenter HorizontalAlignment="Center" 
+                                                          VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#5D73BC"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
         </StackPanel>
+
         <!-- Error Message -->
-        <TextBlock Text="{Binding ErrorMessage}" 
-                   Grid.Row="5" 
-                   Foreground="Red" 
-                   TextWrapping="Wrap"/>
+        <TextBlock Grid.Row="7" 
+                   Grid.ColumnSpan="2" 
+                   Text="{Binding ErrorMessage}" 
+                   Foreground="#FF5555" 
+                   TextWrapping="Wrap" 
+                   Margin="0,10,0,0"/>
+
+        <!-- Loading Overlay -->
+        <Grid Grid.RowSpan="8" 
+              Grid.ColumnSpan="2" 
+              Background="#80000000" 
+              Visibility="{Binding IsRegistering, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel VerticalAlignment="Center" 
+                        HorizontalAlignment="Center">
+                <TextBlock Text="{Binding StatusMessage}" 
+                           Foreground="White" 
+                           FontSize="16" 
+                           HorizontalAlignment="Center"/>
+                <ProgressBar IsIndeterminate="True" 
+                             Width="150" 
+                             Height="5" 
+                             Margin="0,10,0,0"/>
+            </StackPanel>
+        </Grid>
     </Grid>
 </Window>
