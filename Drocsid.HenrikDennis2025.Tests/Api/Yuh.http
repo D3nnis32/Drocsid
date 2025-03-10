@@ -144,6 +144,9 @@ This is a test file content
     }
 %}
 
+###
+GET {{registryUrl}}/api/registry/files/{{fileId}}/locations
+
 ### Add user to channel
 POST http://localhost:5186/api/Channels/{{channelId}}/members
 Content-Type: application/json

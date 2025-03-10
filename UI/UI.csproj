@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Logic.UI\Logic.UI.csproj" />
+    <ProjectReference Include="..\RegistryService\RegistryService.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -8,12 +8,12 @@ public interface IPluginEventManager
     /// <summary>
     /// Subscribe to an event
     /// </summary>
-    void Subscribe<T>(string eventName, Action<T> handler) where T : class;
+    void Subscribe<T>(string eventName, Action<T> handler);
         
     /// <summary>
     /// Unsubscribe from an event
     /// </summary>
-    void Unsubscribe<T>(string eventName, Action<T> handler) where T : class;
+    void Unsubscribe<T>(string eventName, Action<T> handler);
         
     /// <summary>
     /// Publish an event
