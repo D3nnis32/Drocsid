@@ -10,6 +10,9 @@
     <Compile Update="AddChannelWindow.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="AddMembersWindow.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="ChatInterfaceUserControl.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -22,6 +25,9 @@
   </ItemGroup>
   <ItemGroup>
     <Page Update="AddChannelWindow.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="AddMembersWindow.xaml">
       <SubType>Designer</SubType>
     </Page>
     <Page Update="ChatInterfaceUserControl.xaml">

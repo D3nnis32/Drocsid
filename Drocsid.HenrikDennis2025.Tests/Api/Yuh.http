@@ -40,7 +40,7 @@ POST {{registryUrl}}/api/gateway/connect
 Content-Type: application/json
 
 {
-  "username": "8",
+  "username": "3",
   "password": "1"
 }
 
@@ -54,11 +54,11 @@ Content-Type: application/json
 %}
 
 ### Step 3: Verify the token with the first storage node (this syncs the user to node1)
-POST {{nodeUrl}}/api/auth/verify-token
+POST http://localhost:5186/api/auth/verify-token
 Content-Type: application/json
 
 {
-  "token": "{{token}}"
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiYTU4MzRjNy0yNzBlLTRkYzYtYTRhYi0wMmZhZDFlYTc5MDUiLCJ1bmlxdWVfbmFtZSI6IjIiLCJqdGkiOiIwZjE2OTIyNy1iOWRmLTQ5NGQtYmRkMi01NjJjY2UzN2I4ZDIiLCJleHAiOjE3NDIxNjYzMjgsImlzcyI6IkhlbnJpa0Rlbm5pcyIsImF1ZCI6IkFwaUFwcCJ9.2fUhGmigRb_EOQGBY0O6XxKnO7vGrQdoix9RHqyCsE4"
 }
 
 ### Step 2: Login through the Gateway to get token and node assignment
@@ -66,7 +66,7 @@ POST {{registryUrl}}/api/gateway/connect
 Content-Type: application/json
 
 {
-  "username": "2",
+  "username": "3",
   "password": "1"
 }
 
@@ -84,7 +84,7 @@ POST http://localhost:5186/api/auth/verify-token
 Content-Type: application/json
 
 {
-  "token": "{{token}}"
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzZjNkOGRiMS02Njg2LTRiMDAtOTc1Ni1mOTI2OGM2NzA2ZDciLCJ1bmlxdWVfbmFtZSI6IjMiLCJqdGkiOiJjN2Y3YTFjZC0zYzBlLTRkZDAtYjViMi03NDE1NDg2NDJlZGEiLCJleHAiOjE3NDIxNzc2ODIsImlzcyI6IkhlbnJpa0Rlbm5pcyIsImF1ZCI6IkFwaUFwcCJ9.KidDrvgohdPR0HAmbemHKYmtsEYL09WY_BwQ5_FbiMU"
 }
 
 ### Step 5: Get current user info (from node1) to confirm everything works

@@ -23,7 +23,7 @@ namespace Logic.UI.ViewModels
         private string _errorMessage;
         private System.Windows.Threading.DispatcherTimer _refreshTimer;
         private bool _isAttaching;
-
+        public Channel Channel => _channel;
         public ObservableCollection<Message> Messages { get; } = new ObservableCollection<Message>();
 
         // Collection to hold pending attachments
@@ -78,6 +78,10 @@ namespace Logic.UI.ViewModels
         public RelayCommand RefreshMessagesCommand { get; }
         public RelayCommand AddAttachmentCommand { get; }
         public RelayCommand<PendingAttachment> RemoveAttachmentCommand { get; }
+        public RelayCommand<Attachment> DownloadAttachmentCommand { get; }
+        public RelayCommand OpenAddMembersWindowCommand { get; }
+
+        public event EventHandler RequestOpenAddMembersWindow;
 
         public ChatViewModel(Channel channel)
         {
@@ -88,6 +92,8 @@ namespace Logic.UI.ViewModels
                 execute: SendMessage,
                 canExecute: () => (!string.IsNullOrWhiteSpace(MessageText) || PendingAttachments.Count > 0) && !IsSending
             );
+
+            OpenAddMembersWindowCommand = new RelayCommand(OpenAddMembersWindow);
 
             RefreshMessagesCommand = new RelayCommand(
                 execute: () => Task.Run(async () => await LoadMessagesAsync())
@@ -101,6 +107,11 @@ namespace Logic.UI.ViewModels
             RemoveAttachmentCommand = new RelayCommand<PendingAttachment>(
                 execute: RemoveAttachment,
                 canExecute: (attachment) => attachment != null && !IsSending
+            );
+
+            DownloadAttachmentCommand = new RelayCommand<Attachment>(
+            execute: async (attachment) => await DownloadAttachmentAsync(attachment),
+            canExecute: (attachment) => attachment != null
             );
 
             // Initialize timer on UI thread to avoid threading issues
@@ -117,7 +128,43 @@ namespace Logic.UI.ViewModels
             // Load initial messages
             Task.Run(async () => await LoadMessagesAsync());
         }
+        private void OpenAddMembersWindow()
+        {
+            RequestOpenAddMembersWindow?.Invoke(this, EventArgs.Empty);
+        }
 
+        private async Task DownloadAttachmentAsync(Attachment attachment)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/files/{attachment.Id}/content");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    ErrorMessage = "Failed to download file.";
+                    Console.WriteLine($"DEBUG: Download failed. Status: {response.StatusCode}");
+                    return;
+                }
+
+                var fileBytes = await response.Content.ReadAsByteArrayAsync();
+                var saveFileDialog = new SaveFileDialog
+                {
+                    FileName = attachment.Filename,
+                    Filter = "All Files (*.*)|*.*"
+                };
+
+                if (saveFileDialog.ShowDialog() == true)
+                {
+                    File.WriteAllBytes(saveFileDialog.FileName, fileBytes);
+                    Console.WriteLine($"DEBUG: File downloaded: {saveFileDialog.FileName}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"DEBUG: Exception downloading file: {ex.Message}");
+                ErrorMessage = "Error downloading file.";
+            }
+        }
         private void AddAttachment()
         {
             try
@@ -326,17 +373,26 @@ namespace Logic.UI.ViewModels
                 {
                     var messages = await response.Content.ReadFromJsonAsync<Message[]>();
 
-                    // We need to update on the UI thread
+                    Console.WriteLine($"DEBUG: Loaded {messages.Length} messages.");
+
                     System.Windows.Application.Current.Dispatcher.Invoke(() =>
                     {
                         Messages.Clear();
                         foreach (var message in messages)
                         {
+                            Console.WriteLine($"DEBUG: Message ID: {message.Id}, Content: {message.Content}");
+
+                            if (message.Attachments != null)
+                            {
+                                foreach (var attachment in message.Attachments)
+                                {
+                                    Console.WriteLine($"DEBUG: Attachment ID: {attachment.Id}, Filename: {attachment.Filename}");
+                                }
+                            }
+
                             Messages.Add(message);
                         }
                     });
-
-                    Console.WriteLine($"DEBUG: Loaded {messages.Length} messages.");
                 }
                 else
                 {
@@ -348,6 +404,7 @@ namespace Logic.UI.ViewModels
                 Console.WriteLine($"DEBUG: Exception fetching messages: {ex.Message}");
             }
         }
+
 
         // Make sure to clean up resources
         public void Dispose()
